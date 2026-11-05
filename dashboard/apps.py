@@ -2,4 +2,6 @@ from django.apps import AppConfig
 
 
 class DashboardConfig(AppConfig):
-    name = 'dashboard'
+    """Configuration de l'application dashboard."""
+
+    name = "dashboard"

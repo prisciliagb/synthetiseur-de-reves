@@ -2,4 +2,6 @@ from django.apps import AppConfig
 
 
 class AccountsConfig(AppConfig):
-    name = 'accounts'
+    """Configuration de l'application accounts."""
+
+    name = "accounts"
