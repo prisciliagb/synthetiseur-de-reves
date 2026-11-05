@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dreams
+      POSTGRES_USER: dreams
+      POSTGRES_PASSWORD: dreams
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dreams"]
+      interval: 5s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://dreams:dreams@db:5432/dreams
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
