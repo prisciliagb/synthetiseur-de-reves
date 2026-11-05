@@ -1,0 +1,11 @@
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "D"]
+ignore = ["D100", "D104", "D106"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
