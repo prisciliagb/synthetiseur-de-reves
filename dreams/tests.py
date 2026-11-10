@@ -1,5 +1,6 @@
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
@@ -124,7 +125,6 @@ def fake_audio(header: bytes, name: str = "reve.webm") -> SimpleUploadedFile:
 
 
 WEBM_HEADER = b"\x1a\x45\xdf\xa3"
-OGG_HEADER = b"OggS"
 MP4_HEADER = b"\x00\x00\x00\x20ftypM4A "
 
 
@@ -155,13 +155,19 @@ class RecordPageTests(TestCase):
 
 
 class AudioUploadTests(TestCase):
-    """Tests de la réception de l'enregistrement audio."""
+    """Tests de la réception de l'enregistrement audio.
+
+    La transcription est simulée : ces tests n'appellent jamais Groq.
+    """
 
     def setUp(self) -> None:
-        """Connecte un utilisateur de test."""
+        """Connecte un utilisateur de test et simule la transcription."""
         self.user = User.objects.create_user("alice", "alice@example.com")
         self.client.force_login(self.user)
         self.url = reverse("dreams:upload_audio")
+        patcher = patch("dreams.views.transcribe", return_value="Je volais.")
+        self.transcribe = patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_anonymous_user_cannot_upload(self) -> None:
         """Un visiteur non connecté ne peut pas envoyer d'audio."""
@@ -179,7 +185,7 @@ class AudioUploadTests(TestCase):
 
     def test_browser_formats_are_accepted(self) -> None:
         """Les formats produits par les navigateurs sont acceptés."""
-        for header in (WEBM_HEADER, OGG_HEADER, MP4_HEADER):
+        for header in (WEBM_HEADER, MP4_HEADER):
             with self.subTest(header=header):
                 response = self.client.post(self.url, {"audio": fake_audio(header)})
 
@@ -211,10 +217,16 @@ class AudioUploadTests(TestCase):
         self.assertIn("trop lourd", response.json()["error"])
 
     def test_audio_is_never_stored(self) -> None:
-        """L'audio n'est ni sauvegardé sur le disque ni en base (RGPD)."""
+        """Seule la transcription est conservée, jamais l'audio (RGPD)."""
         with tempfile.TemporaryDirectory() as media_root:
             with override_settings(MEDIA_ROOT=media_root):
                 self.client.post(self.url, {"audio": fake_audio(WEBM_HEADER)})
 
             self.assertEqual(list(Path(media_root).iterdir()), [])
-        self.assertFalse(Dream.objects.exists())
+        self.assertEqual(Dream.objects.get().transcription, "Je volais.")
+
+    def test_invalid_audio_is_never_sent_to_groq(self) -> None:
+        """Un fichier refusé n'est jamais envoyé à l'API de transcription."""
+        self.client.post(self.url, {"audio": fake_audio(b"Ceci est un texte")})
+
+        self.transcribe.assert_not_called()

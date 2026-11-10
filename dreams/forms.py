@@ -2,12 +2,9 @@ from django import forms
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
-# Signatures (premiers octets) des formats audio produits par les navigateurs :
-# Chrome et Firefox enregistrent en WebM ou en Ogg, Safari en MP4.
-AUDIO_SIGNATURES = {
-    "webm": b"\x1a\x45\xdf\xa3",
-    "ogg": b"OggS",
-}
+# Signature (premiers octets) d'un fichier WebM, le format d'enregistrement
+# de Chrome, Firefox et Edge. Safari enregistre en MP4 (repéré par « ftyp »).
+WEBM_SIGNATURE = b"\x1a\x45\xdf\xa3"
 
 
 def detect_audio_format(audio: UploadedFile) -> str | None:
@@ -20,14 +17,13 @@ def detect_audio_format(audio: UploadedFile) -> str | None:
         audio: Le fichier envoyé.
 
     Returns:
-        "webm", "ogg" ou "mp4" si le format est reconnu, sinon None.
+        "webm" ou "mp4" si le format est reconnu, sinon None.
     """
     audio.seek(0)
     header = audio.read(12)
     audio.seek(0)
-    for audio_format, signature in AUDIO_SIGNATURES.items():
-        if header.startswith(signature):
-            return audio_format
+    if header.startswith(WEBM_SIGNATURE):
+        return "webm"
     if header[4:8] == b"ftyp":
         return "mp4"
     return None

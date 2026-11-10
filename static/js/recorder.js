@@ -4,7 +4,8 @@
  * 1. « Démarrer » demande l'accès au micro puis lance l'enregistrement.
  * 2. Le chronomètre s'affiche ; l'enregistrement s'arrête seul à la durée maximale.
  * 3. « Arrêter » termine l'enregistrement et affiche un lecteur pour le réécouter.
- * 4. « Envoyer » transmet l'audio au serveur Django.
+ * 4. « Envoyer » transmet l'audio au serveur Django, qui le transcrit ; on
+ *    affiche ensuite la page du rêve avec sa transcription.
  */
 (function () {
   "use strict";
@@ -26,13 +27,8 @@
   const maxSize = Number(recorderBox.dataset.maxSize);
   const csrfToken = recorderBox.querySelector("[name=csrfmiddlewaretoken]").value;
 
-  // Formats essayés dans l'ordre : WebM (Chrome, Firefox), Ogg, puis MP4 (Safari).
-  const PREFERRED_TYPES = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/ogg;codecs=opus",
-    "audio/mp4",
-  ];
+  // Formats essayés dans l'ordre : WebM (Chrome, Firefox, Edge), puis MP4 (Safari).
+  const PREFERRED_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
 
   // --- État de l'enregistrement --------------------------------------------
   let mediaRecorder = null;
@@ -152,7 +148,6 @@
 
   // --- Envoi au serveur -----------------------------------------------------------
   function fileExtension(type) {
-    if (type.includes("ogg")) return "ogg";
     if (type.includes("mp4")) return "mp4";
     return "webm";
   }
@@ -171,33 +166,41 @@
 
     sendButton.disabled = true;
     startButton.disabled = true;
-    sendButton.textContent = "Envoi en cours…";
+    sendButton.textContent = "Transcription en cours… (quelques secondes)";
     hideMessages();
 
+    let response;
+    let data = {};
     try {
-      const response = await fetch(uploadUrl, {
+      response = await fetch(uploadUrl, {
         method: "POST",
         headers: { "X-CSRFToken": csrfToken },
         body: formData,
       });
-      const data = await response.json();
-      if (response.ok) {
-        showInfo(data.message);
-        recording = null;
-        reviewBox.classList.add("d-none");
-        timerDisplay.textContent = formatTime(0);
-        startButton.textContent = "● Raconter un autre rêve";
-      } else {
-        showError(data.error || "L'envoi a échoué. Réessayez.");
-        sendButton.disabled = false;
-      }
+      data = await response.json();
     } catch (error) {
-      showError("Impossible de joindre le serveur. Vérifiez votre connexion puis réessayez.");
-      sendButton.disabled = false;
-    } finally {
-      sendButton.textContent = "Envoyer mon rêve";
-      startButton.disabled = false;
+      // Pas de réponse (connexion coupée) ou réponse qui n'est pas du JSON.
+      if (!response) {
+        failSending("Impossible de joindre le serveur. Vérifiez votre connexion puis réessayez.");
+        return;
+      }
     }
+
+    if (response.ok && data.redirect_url) {
+      // Le rêve est créé : on affiche sa page avec la transcription.
+      // Les boutons restent désactivés pendant le changement de page.
+      window.location.href = data.redirect_url;
+      return;
+    }
+    failSending(data.error || "Une erreur inattendue est survenue. Réessayez.");
+  }
+
+  /** Affiche l'erreur et permet de renvoyer le même enregistrement. */
+  function failSending(message) {
+    showError(message);
+    sendButton.textContent = "Envoyer mon rêve";
+    sendButton.disabled = false;
+    startButton.disabled = false;
   }
 
   // --- Démarrage de la page ------------------------------------------------------------

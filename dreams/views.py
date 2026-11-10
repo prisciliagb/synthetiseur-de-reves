@@ -3,11 +3,13 @@ from typing import Any
 from django.conf import settings
 from django.db.models import QuerySet
 from django.http import HttpRequest, JsonResponse
+from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 
 from .forms import AudioRecordingForm
 from .models import Dream
+from .services.transcription import TranscriptionError, transcribe
 
 
 class UserDreamsMixin:
@@ -55,33 +57,47 @@ class RecordDreamView(TemplateView):
 
 
 class AudioUploadView(View):
-    """Reçoit l'enregistrement audio envoyé par le navigateur.
+    """Reçoit l'enregistrement audio, le transcrit et crée le rêve.
 
-    L'audio est contrôlé (taille, format) puis jamais enregistré sur le disque :
-    Django le supprime automatiquement à la fin de la requête. La transcription
-    sera branchée ici dans une prochaine issue.
+    L'audio n'est jamais enregistré : il est contrôlé (taille, format), envoyé
+    à Groq Whisper, puis supprimé. Seule la transcription est conservée.
     """
 
     http_method_names = ["post"]
 
     def post(self, request: HttpRequest) -> JsonResponse:
-        """Valide l'enregistrement reçu.
+        """Transcrit l'enregistrement reçu et crée le rêve correspondant.
 
         Args:
             request: La requête contenant le fichier « audio ».
 
         Returns:
-            Une réponse JSON : 200 si l'audio est valide, 400 sinon.
+            Une réponse JSON :
+            - 200 avec l'adresse du rêve créé si tout s'est bien passé ;
+            - 400 si l'audio est invalide ;
+            - 502 si la transcription a échoué.
         """
         form = AudioRecordingForm(files=request.FILES)
         if not form.is_valid():
             return JsonResponse(
                 {"ok": False, "error": form.errors["audio"][0]}, status=400
             )
+
+        audio = form.cleaned_data["audio"]
+        try:
+            transcription = transcribe(audio)
+        except TranscriptionError as error:
+            return JsonResponse({"ok": False, "error": error.user_message}, status=502)
+        finally:
+            # RGPD : l'audio est supprimé dès la fin de la transcription, qu'elle
+            # ait réussi ou non. Fermer le fichier efface sa copie temporaire.
+            audio.close()
+
+        dream = Dream.objects.create(
+            user=request.user,
+            transcription=transcription,
+            status=Dream.Status.DONE,
+        )
         return JsonResponse(
-            {
-                "ok": True,
-                "message": "Votre rêve a bien été reçu. "
-                "La transcription sera bientôt disponible.",
-            }
+            {"ok": True, "redirect_url": reverse("dreams:detail", args=[dream.pk])}
         )
