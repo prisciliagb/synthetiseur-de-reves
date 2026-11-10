@@ -1,7 +1,11 @@
+import tempfile
+from pathlib import Path
+
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import Dream
@@ -104,3 +108,113 @@ class DreamAccessTests(TestCase):
         response = self.client.get(reverse("dreams:detail", args=[self.bob_dream.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+
+def fake_audio(header: bytes, name: str = "reve.webm") -> SimpleUploadedFile:
+    """Crée un faux fichier audio qui commence par la signature donnée.
+
+    Args:
+        header: Premiers octets du fichier (signature du format).
+        name: Nom du fichier.
+
+    Returns:
+        Un fichier prêt à être envoyé dans une requête de test.
+    """
+    return SimpleUploadedFile(name, header + b"\x00" * 100, content_type="audio/webm")
+
+
+WEBM_HEADER = b"\x1a\x45\xdf\xa3"
+OGG_HEADER = b"OggS"
+MP4_HEADER = b"\x00\x00\x00\x20ftypM4A "
+
+
+class RecordPageTests(TestCase):
+    """Tests de la page « Raconter un rêve »."""
+
+    def test_anonymous_user_is_redirected_to_login(self) -> None:
+        """La page d'enregistrement exige d'être connecté."""
+        url = reverse("dreams:record")
+
+        response = self.client.get(url)
+
+        self.assertRedirects(response, f"{reverse('accounts:login')}?next={url}")
+
+    def test_page_gives_settings_to_javascript(self) -> None:
+        """La page transmet au JavaScript l'URL d'envoi et la durée maximale."""
+        user = User.objects.create_user("alice", "alice@example.com")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("dreams:record"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response, f'data-upload-url="{reverse("dreams:upload_audio")}"'
+        )
+        self.assertContains(response, 'data-max-seconds="300"')
+        self.assertContains(response, "js/recorder.js")
+
+
+class AudioUploadTests(TestCase):
+    """Tests de la réception de l'enregistrement audio."""
+
+    def setUp(self) -> None:
+        """Connecte un utilisateur de test."""
+        self.user = User.objects.create_user("alice", "alice@example.com")
+        self.client.force_login(self.user)
+        self.url = reverse("dreams:upload_audio")
+
+    def test_anonymous_user_cannot_upload(self) -> None:
+        """Un visiteur non connecté ne peut pas envoyer d'audio."""
+        self.client.logout()
+
+        response = self.client.post(self.url, {"audio": fake_audio(WEBM_HEADER)})
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_get_is_not_allowed(self) -> None:
+        """L'URL d'envoi n'accepte que les requêtes POST."""
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_browser_formats_are_accepted(self) -> None:
+        """Les formats produits par les navigateurs sont acceptés."""
+        for header in (WEBM_HEADER, OGG_HEADER, MP4_HEADER):
+            with self.subTest(header=header):
+                response = self.client.post(self.url, {"audio": fake_audio(header)})
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(response.json()["ok"])
+
+    def test_missing_audio_is_refused(self) -> None:
+        """Une requête sans fichier est refusée avec un message clair."""
+        response = self.client.post(self.url)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "Aucun enregistrement n'a été reçu.")
+
+    def test_non_audio_file_is_refused(self) -> None:
+        """Un fichier qui n'est pas de l'audio est refusé, même renommé en .webm."""
+        response = self.client.post(
+            self.url, {"audio": fake_audio(b"Ceci est un texte", name="faux.webm")}
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["ok"])
+
+    @override_settings(DREAM_AUDIO_MAX_SIZE=50)
+    def test_too_large_audio_is_refused(self) -> None:
+        """Un enregistrement plus lourd que la limite est refusé."""
+        response = self.client.post(self.url, {"audio": fake_audio(WEBM_HEADER)})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("trop lourd", response.json()["error"])
+
+    def test_audio_is_never_stored(self) -> None:
+        """L'audio n'est ni sauvegardé sur le disque ni en base (RGPD)."""
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                self.client.post(self.url, {"audio": fake_audio(WEBM_HEADER)})
+
+            self.assertEqual(list(Path(media_root).iterdir()), [])
+        self.assertFalse(Dream.objects.exists())

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Raconter un rêve · {{ block.super }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6 text-center">
+    <h1 class="h3 mb-2">Raconter un rêve</h1>
+    <p class="text-muted mb-4">
+      Appuyez sur « Démarrer » et racontez votre rêve à voix haute
+      ({% widthratio max_seconds 60 1 %} minutes maximum).
+      Votre voix n'est pas conservée : seule la transcription du rêve est enregistrée.
+    </p>
+
+    {# Zones de messages : erreur (micro refusé…) et information (succès…) #}
+    <div id="recorder-error" class="alert alert-danger d-none" role="alert"></div>
+    <div id="recorder-info" class="alert alert-success d-none" role="status"></div>
+
+    {# Les data-* transmettent au JavaScript les réglages définis côté Django #}
+    <div id="recorder" class="card shadow-sm"
+         data-upload-url="{% url 'dreams:upload_audio' %}"
+         data-max-seconds="{{ max_seconds }}"
+         data-max-size="{{ max_size }}">
+      <div class="card-body p-4">
+        {% csrf_token %}
+
+        {# Chronomètre #}
+        <p id="recorder-timer" class="display-4 font-monospace mb-4" aria-live="polite">00:00</p>
+
+        {# Boutons démarrer / arrêter #}
+        <div class="d-flex justify-content-center gap-2 mb-4">
+          <button id="btn-start" type="button" class="btn btn-danger btn-lg">● Démarrer</button>
+          <button id="btn-stop" type="button" class="btn btn-secondary btn-lg" disabled>■ Arrêter</button>
+        </div>
+
+        {# Réécoute et envoi, affichés après l'enregistrement #}
+        <div id="recorder-review" class="d-none">
+          <audio id="recorder-player" controls class="w-100 mb-3"></audio>
+          <button id="btn-send" type="button" class="btn btn-primary w-100">Envoyer mon rêve</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{% static 'js/recorder.js' %}"></script>
+{% endblock %}

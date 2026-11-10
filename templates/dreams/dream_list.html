@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Mes rêves · {{ block.super }}{% endblock %}
 {% block content %}
-<h1 class="h3 mb-4">Mes rêves</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h3 mb-0">Mes rêves</h1>
+  <a href="{% url 'dreams:record' %}" class="btn btn-primary">🎙️ Raconter un rêve</a>
+</div>
 {% if dreams %}
   <div class="list-group">
     {% for dream in dreams %}

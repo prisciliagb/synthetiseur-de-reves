@@ -123,10 +123,19 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Fichiers envoyés ou générés (images des rêves)
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+
+# Enregistrement des rêves
+# L'audio n'est jamais conservé : il sert uniquement à la transcription.
+
+DREAM_AUDIO_MAX_SECONDS = 5 * 60
+# 25 Mo : taille maximale acceptée par l'API Whisper d'OpenAI.
+DREAM_AUDIO_MAX_SIZE = 25 * 1024 * 1024
 
 
 # Email
