@@ -134,8 +134,37 @@ MEDIA_ROOT = BASE_DIR / "media"
 # L'audio n'est jamais conservé : il sert uniquement à la transcription.
 
 DREAM_AUDIO_MAX_SECONDS = 5 * 60
-# 25 Mo : taille maximale acceptée par l'API Whisper d'OpenAI.
+# 25 Mo : taille maximale acceptée par l'API Whisper.
 DREAM_AUDIO_MAX_SIZE = 25 * 1024 * 1024
+
+
+# Groq (transcription avec Whisper)
+# https://console.groq.com/docs/speech-to-text
+
+GROQ_API_KEY = env("GROQ_API_KEY", default="")
+GROQ_WHISPER_MODEL = env("GROQ_WHISPER_MODEL", default="whisper-large-v3-turbo")
+# Temps maximal d'attente d'une réponse de Groq, en secondes.
+GROQ_TIMEOUT = env.float("GROQ_TIMEOUT", default=60.0)
+# Nombre total de tentatives en cas d'échec temporaire (réseau, surcharge…).
+GROQ_MAX_ATTEMPTS = env.int("GROQ_MAX_ATTEMPTS", default=3)
+
+
+# Logs : affichés dans la console (et donc dans `docker compose logs`).
+# Ils ne contiennent jamais le texte des rêves (données personnelles).
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "{asctime} {levelname} {name} : {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+    },
+    "loggers": {
+        "dreams": {"handlers": ["console"], "level": "INFO"},
+    },
+}
 
 
 # Email
