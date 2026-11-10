@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ dream }} · {{ block.super }}{% endblock %}
+{% block content %}
+<a href="{% url 'dreams:list' %}" class="btn btn-link px-0 mb-3">← Mes rêves</a>
+<h1 class="h3 mb-3">Rêve du {{ dream.created_at|date:"d/m/Y à H:i" }}</h1>
+<p>
+  <span class="badge text-bg-secondary">{{ dream.get_status_display }}</span>
+  {% if dream.emotion %}
+    <span class="badge text-bg-info">{{ dream.get_emotion_display }}</span>
+    {% if dream.confidence is not None %}<small class="text-muted">confiance : {% widthratio dream.confidence 1 100 %} %</small>{% endif %}
+  {% endif %}
+</p>
+{% if dream.image %}
+  <img src="{{ dream.image.url }}" alt="Illustration du rêve" class="img-fluid rounded mb-4">
+{% endif %}
+<h2 class="h5">Transcription</h2>
+<p>{{ dream.transcription|default:"Pas encore transcrit."|linebreaksbr }}</p>
+{% endblock %}

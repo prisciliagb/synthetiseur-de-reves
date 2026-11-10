@@ -1,11 +1,31 @@
-from django.views.generic import TemplateView
+from django.db.models import QuerySet
+from django.views.generic import DetailView, ListView
+
+from .models import Dream
 
 
-class DreamListView(TemplateView):
-    """Liste des rêves de l'utilisateur connecté.
+class UserDreamsMixin:
+    """Limite les rêves accessibles à ceux de l'utilisateur connecté.
 
-    Page provisoire : elle sera complétée avec le modèle Dream. Elle est
-    protégée par LoginRequiredMiddleware, comme toutes les pages par défaut.
+    Toute vue qui hérite de ce mixin ne peut lire que les rêves de
+    l'utilisateur. Un rêve d'un autre utilisateur renvoie une erreur 404,
+    comme s'il n'existait pas.
     """
 
-    template_name = "dreams/dream_list.html"
+    def get_queryset(self) -> QuerySet[Dream]:
+        """Renvoie uniquement les rêves de l'utilisateur connecté."""
+        return Dream.objects.filter(user=self.request.user)
+
+
+class DreamListView(UserDreamsMixin, ListView):
+    """Liste des rêves de l'utilisateur connecté."""
+
+    model = Dream
+    context_object_name = "dreams"
+
+
+class DreamDetailView(UserDreamsMixin, DetailView):
+    """Détail d'un rêve de l'utilisateur connecté."""
+
+    model = Dream
+    context_object_name = "dream"
