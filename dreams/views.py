@@ -9,6 +9,7 @@ from django.views.generic import DetailView, ListView, TemplateView
 
 from .forms import AudioRecordingForm
 from .models import Dream
+from .services.analysis import AnalysisError, analyze_dream
 from .services.transcription import TranscriptionError, transcribe
 
 
@@ -57,10 +58,11 @@ class RecordDreamView(TemplateView):
 
 
 class AudioUploadView(View):
-    """Reçoit l'enregistrement audio, le transcrit et crée le rêve.
+    """Reçoit l'enregistrement audio, le transcrit, l'analyse et crée le rêve.
 
     L'audio n'est jamais enregistré : il est contrôlé (taille, format), envoyé
-    à Groq Whisper, puis supprimé. Seule la transcription est conservée.
+    à Groq Whisper, puis supprimé. Seule la transcription est conservée. Le
+    texte est ensuite analysé par le LLM (émotion et prompt d'image).
     """
 
     http_method_names = ["post"]
@@ -93,11 +95,22 @@ class AudioUploadView(View):
             # ait réussi ou non. Fermer le fichier efface sa copie temporaire.
             audio.close()
 
-        dream = Dream.objects.create(
+        dream = Dream(
             user=request.user,
             transcription=transcription,
             status=Dream.Status.DONE,
         )
+        try:
+            analysis = analyze_dream(transcription)
+        except AnalysisError:
+            # L'analyse a échoué, mais la transcription est gardée : le rêve
+            # est quand même enregistré, sans émotion.
+            pass
+        else:
+            dream.emotion = analysis.emotion
+            dream.confidence = analysis.confidence
+            dream.image_prompt = analysis.image_prompt
+        dream.save()
         return JsonResponse(
             {"ok": True, "redirect_url": reverse("dreams:detail", args=[dream.pk])}
         )

@@ -15,6 +15,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 from .models import Dream
+from .services.analysis import DreamAnalysis
 from .services.transcription import (
     GROQ_TRANSCRIPTION_URL,
     TranscriptionError,
@@ -46,7 +47,7 @@ def groq_response(status_code: int, json: object = None) -> httpx.Response:
 
 
 @override_settings(GROQ_API_KEY="cle-de-test", GROQ_MAX_ATTEMPTS=3)
-@patch("dreams.services.transcription.time.sleep")
+@patch("dreams.services.groq.time.sleep")
 @patch("dreams.services.transcription.httpx.post")
 class TranscribeServiceTests(SimpleTestCase):
     """Tests du service `transcribe()`."""
@@ -141,10 +142,16 @@ class TranscriptionViewTests(TestCase):
     """Tests du branchement de la transcription dans l'envoi de l'audio."""
 
     def setUp(self) -> None:
-        """Connecte un utilisateur de test."""
+        """Connecte un utilisateur de test et simule l'analyse du rêve."""
         self.user = get_user_model().objects.create_user("alice", "alice@example.com")
         self.client.force_login(self.user)
         self.url = reverse("dreams:upload_audio")
+        patcher = patch(
+            "dreams.views.analyze_dream",
+            return_value=DreamAnalysis("happy", 0.9, "A person flying."),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     @patch("dreams.views.transcribe", return_value="Je volais au-dessus de la mer.")
     def test_success_creates_dream_and_redirects_to_it(self, transcribe) -> None:

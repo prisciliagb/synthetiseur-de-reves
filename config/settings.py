@@ -143,6 +143,8 @@ DREAM_AUDIO_MAX_SIZE = 25 * 1024 * 1024
 
 GROQ_API_KEY = env("GROQ_API_KEY", default="")
 GROQ_WHISPER_MODEL = env("GROQ_WHISPER_MODEL", default="whisper-large-v3-turbo")
+# LLM qui détecte l'émotion du rêve et écrit le prompt de son image.
+GROQ_LLM_MODEL = env("GROQ_LLM_MODEL", default="openai/gpt-oss-20b")
 # Temps maximal d'attente d'une réponse de Groq, en secondes.
 GROQ_TIMEOUT = env.float("GROQ_TIMEOUT", default=60.0)
 # Nombre total de tentatives en cas d'échec temporaire (réseau, surcharge…).

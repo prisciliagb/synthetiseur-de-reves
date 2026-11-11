@@ -24,6 +24,7 @@ class Dream(models.Model):
         SAD = "sad", "Triste"
         STRESSFUL = "stressful", "Stressant"
         SCARY = "scary", "Effrayant"
+        STRANGE = "strange", "Étrange"
         NEUTRAL = "neutral", "Neutre"
 
     class Status(models.TextChoices):
