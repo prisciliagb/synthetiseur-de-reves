@@ -10,6 +10,7 @@ from django.views.generic import DetailView, ListView, TemplateView
 from .forms import AudioRecordingForm
 from .models import Dream
 from .services.analysis import AnalysisError, analyze_dream
+from .services.image import ImageGenerationError, generate_dream_image
 from .services.transcription import TranscriptionError, transcribe
 
 
@@ -62,7 +63,8 @@ class AudioUploadView(View):
 
     L'audio n'est jamais enregistré : il est contrôlé (taille, format), envoyé
     à Groq Whisper, puis supprimé. Seule la transcription est conservée. Le
-    texte est ensuite analysé par le LLM (émotion et prompt d'image).
+    texte est ensuite analysé par le LLM (émotion et prompt d'image), puis
+    l'image est générée par Replicate et stockée sur Cloudinary.
     """
 
     http_method_names = ["post"]
@@ -110,6 +112,11 @@ class AudioUploadView(View):
             dream.emotion = analysis.emotion
             dream.confidence = analysis.confidence
             dream.image_prompt = analysis.image_prompt
+            try:
+                generate_dream_image(dream)
+            except ImageGenerationError:
+                # Pas d'image : la page du rêve affiche l'image de remplacement.
+                pass
         dream.save()
         return JsonResponse(
             {"ok": True, "redirect_url": reverse("dreams:detail", args=[dream.pk])}

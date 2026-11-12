@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ dream }} · {{ block.super }}{% endblock %}
 {% block content %}
 <a href="{% url 'dreams:list' %}" class="btn btn-link px-0 mb-3">← Mes rêves</a>
@@ -11,7 +12,13 @@
   {% endif %}
 </p>
 {% if dream.image %}
-  <img src="{{ dream.image.url }}" alt="Illustration du rêve" class="img-fluid rounded mb-4">
+  <img src="{{ dream.image.url }}" alt="Illustration du rêve" class="img-fluid rounded mb-4" width="512" height="512">
+{% else %}
+  {# Image de remplacement : la génération a échoué ou n'a pas encore eu lieu #}
+  <figure class="mb-4">
+    <img src="{% static 'img/dream-placeholder.svg' %}" alt="" class="img-fluid rounded" width="512" height="512">
+    <figcaption class="text-muted small mt-1">Image indisponible pour ce rêve.</figcaption>
+  </figure>
 {% endif %}
 <h2 class="h5">Transcription</h2>
 <p>{{ dream.transcription|default:"Pas encore transcrit."|linebreaksbr }}</p>

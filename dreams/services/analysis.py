@@ -14,7 +14,7 @@ import httpx
 from django.conf import settings
 
 from ..models import Dream
-from .groq import GroqError, call_groq
+from .api import ApiError, call_api
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +83,13 @@ def analyze_dream(transcription: str) -> DreamAnalysis:
         AnalysisError: Si Groq n'a pas pu être appelé.
     """
     try:
-        response = call_groq(lambda: _call_llm(transcription), task="Analyse")
-    except GroqError:
+        response = call_api(
+            lambda: _call_llm(transcription),
+            task="Analyse",
+            api_key=settings.GROQ_API_KEY,
+            max_attempts=settings.GROQ_MAX_ATTEMPTS,
+        )
+    except ApiError:
         raise AnalysisError from None
     return parse_analysis(_extract_content(response))
 
