@@ -1,0 +1,15 @@
+{# Indicateur de chargement : une ligne par étape, mise à jour par pipeline.js #}
+<ol id="pipeline-progress" class="list-group text-start mb-3 d-none" aria-live="polite">
+  <li class="list-group-item d-flex align-items-center gap-2" data-step="transcription">
+    <span class="step-icon" aria-hidden="true"></span>
+    <span>1. Transcription de votre voix</span>
+  </li>
+  <li class="list-group-item d-flex align-items-center gap-2" data-step="analysis">
+    <span class="step-icon" aria-hidden="true"></span>
+    <span>2. Analyse de l'émotion</span>
+  </li>
+  <li class="list-group-item d-flex align-items-center gap-2" data-step="image">
+    <span class="step-icon" aria-hidden="true"></span>
+    <span>3. Création de l'image</span>
+  </li>
+</ol>

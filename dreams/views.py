@@ -3,14 +3,13 @@ from typing import Any
 from django.conf import settings
 from django.db.models import QuerySet
 from django.http import HttpRequest, JsonResponse
-from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
+from django.views.generic.detail import SingleObjectMixin
 
 from .forms import AudioRecordingForm
 from .models import Dream
-from .services.analysis import AnalysisError, analyze_dream
-from .services.image import ImageGenerationError, generate_dream_image
+from .services.pipeline import ANALYSIS, IMAGE, StepError, progress, run_step
 from .services.transcription import TranscriptionError, transcribe
 
 
@@ -40,6 +39,16 @@ class DreamDetailView(UserDreamsMixin, DetailView):
     model = Dream
     context_object_name = "dream"
 
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        """Ajoute l'avancement, pour relancer les étapes manquantes.
+
+        Returns:
+            Le contexte du template, avec l'avancement du traitement.
+        """
+        context = super().get_context_data(**kwargs)
+        context["progress"] = progress(self.object)
+        return context
+
 
 class RecordDreamView(TemplateView):
     """Page pour raconter un rêve au micro."""
@@ -59,12 +68,11 @@ class RecordDreamView(TemplateView):
 
 
 class AudioUploadView(View):
-    """Reçoit l'enregistrement audio, le transcrit, l'analyse et crée le rêve.
+    """Étape 1 : reçoit l'audio, le transcrit et crée le rêve.
 
     L'audio n'est jamais enregistré : il est contrôlé (taille, format), envoyé
     à Groq Whisper, puis supprimé. Seule la transcription est conservée. Le
-    texte est ensuite analysé par le LLM (émotion et prompt d'image), puis
-    l'image est générée par Replicate et stockée sur Cloudinary.
+    JavaScript lance ensuite les étapes suivantes (analyse, image).
     """
 
     http_method_names = ["post"]
@@ -77,7 +85,7 @@ class AudioUploadView(View):
 
         Returns:
             Une réponse JSON :
-            - 200 avec l'adresse du rêve créé si tout s'est bien passé ;
+            - 200 avec la prochaine étape si la transcription a réussi ;
             - 400 si l'audio est invalide ;
             - 502 si la transcription a échoué.
         """
@@ -97,27 +105,61 @@ class AudioUploadView(View):
             # ait réussi ou non. Fermer le fichier efface sa copie temporaire.
             audio.close()
 
-        dream = Dream(
+        # Le texte est enregistré tout de suite : il est conservé même si une
+        # étape suivante échoue.
+        dream = Dream.objects.create(
             user=request.user,
             transcription=transcription,
-            status=Dream.Status.DONE,
+            status=Dream.Status.PROCESSING,
         )
-        try:
-            analysis = analyze_dream(transcription)
-        except AnalysisError:
-            # L'analyse a échoué, mais la transcription est gardée : le rêve
-            # est quand même enregistré, sans émotion.
-            pass
-        else:
-            dream.emotion = analysis.emotion
-            dream.confidence = analysis.confidence
-            dream.image_prompt = analysis.image_prompt
+        return JsonResponse({"ok": True, **progress(dream)})
+
+
+class DreamStepView(UserDreamsMixin, SingleObjectMixin, View):
+    """Exécute une étape du traitement d'un rêve (analyse ou image).
+
+    Grâce à UserDreamsMixin, on ne peut lancer une étape que sur ses propres
+    rêves : le rêve d'un autre utilisateur renvoie une erreur 404.
+    """
+
+    http_method_names = ["post"]
+    model = Dream
+    step = ""
+
+    def post(self, request: HttpRequest, pk: int) -> JsonResponse:
+        """Exécute l'étape, puis indique la suivante.
+
+        Si cette étape n'est pas la prochaine à faire (déjà faite, ou une
+        étape précédente manque), rien n'est exécuté : la réponse indique
+        simplement l'étape à lancer.
+
+        Args:
+            request: La requête.
+            pk: L'identifiant du rêve.
+
+        Returns:
+            Une réponse JSON : 200 avec la prochaine étape, ou 502 avec un
+            message si l'étape a échoué.
+        """
+        dream = self.get_object()
+        if progress(dream)["next_step"] == self.step:
             try:
-                generate_dream_image(dream)
-            except ImageGenerationError:
-                # Pas d'image : la page du rêve affiche l'image de remplacement.
-                pass
-        dream.save()
-        return JsonResponse(
-            {"ok": True, "redirect_url": reverse("dreams:detail", args=[dream.pk])}
-        )
+                run_step(dream, self.step)
+            except StepError as error:
+                return JsonResponse(
+                    {"ok": False, "error": error.user_message, **progress(dream)},
+                    status=502,
+                )
+        return JsonResponse({"ok": True, **progress(dream)})
+
+
+class DreamAnalysisView(DreamStepView):
+    """Étape 2 : détecte l'émotion du rêve et écrit le prompt de son image."""
+
+    step = ANALYSIS
+
+
+class DreamImageView(DreamStepView):
+    """Étape 3 : génère l'image du rêve et la stocke sur Cloudinary."""
+
+    step = IMAGE

@@ -10,7 +10,6 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import Dream
-from .services.analysis import DreamAnalysis
 
 User = get_user_model()
 
@@ -158,23 +157,16 @@ class RecordPageTests(TestCase):
 class AudioUploadTests(TestCase):
     """Tests de la réception de l'enregistrement audio.
 
-    La transcription et l'analyse sont simulées : ces tests n'appellent
-    jamais Groq.
+    La transcription est simulée : ces tests n'appellent jamais Groq.
     """
 
     def setUp(self) -> None:
-        """Connecte un utilisateur de test et simule les appels à Groq."""
+        """Connecte un utilisateur de test et simule la transcription."""
         self.user = User.objects.create_user("alice", "alice@example.com")
         self.client.force_login(self.user)
         self.url = reverse("dreams:upload_audio")
         patcher = patch("dreams.views.transcribe", return_value="Je volais.")
         self.transcribe = patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = patch(
-            "dreams.views.analyze_dream",
-            return_value=DreamAnalysis("happy", 0.9, "A person flying."),
-        )
-        patcher.start()
         self.addCleanup(patcher.stop)
 
     def test_anonymous_user_cannot_upload(self) -> None:

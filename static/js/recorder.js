@@ -4,8 +4,9 @@
  * 1. « Démarrer » demande l'accès au micro puis lance l'enregistrement.
  * 2. Le chronomètre s'affiche ; l'enregistrement s'arrête seul à la durée maximale.
  * 3. « Arrêter » termine l'enregistrement et affiche un lecteur pour le réécouter.
- * 4. « Envoyer » transmet l'audio au serveur Django, qui le transcrit ; on
- *    affiche ensuite la page du rêve avec sa transcription.
+ * 4. « Envoyer » transmet l'audio au serveur Django, qui le transcrit ; les
+ *    étapes suivantes (analyse, image) s'enchaînent avec pipeline.js, puis
+ *    on affiche la page du rêve.
  */
 (function () {
   "use strict";
@@ -20,6 +21,8 @@
   const player = document.getElementById("recorder-player");
   const errorBox = document.getElementById("recorder-error");
   const infoBox = document.getElementById("recorder-info");
+  const progressBox = document.getElementById("pipeline-progress");
+  const dreamLink = document.getElementById("recorder-dream-link");
 
   // --- Réglages transmis par Django (attributs data-*) ---------------------
   const uploadUrl = recorderBox.dataset.uploadUrl;
@@ -166,41 +169,43 @@
 
     sendButton.disabled = true;
     startButton.disabled = true;
-    sendButton.textContent = "Transcription, analyse et image en cours… (jusqu'à une minute)";
+    sendButton.textContent = "Traitement en cours…";
     hideMessages();
 
-    let response;
-    let data = {};
-    try {
-      response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "X-CSRFToken": csrfToken },
-        body: formData,
-      });
-      data = await response.json();
-    } catch (error) {
-      // Pas de réponse (connexion coupée) ou réponse qui n'est pas du JSON.
-      if (!response) {
-        failSending("Impossible de joindre le serveur. Vérifiez votre connexion puis réessayez.");
-        return;
-      }
-    }
-
-    if (response.ok && data.redirect_url) {
-      // Le rêve est créé : on affiche sa page avec la transcription.
-      // Les boutons restent désactivés pendant le changement de page.
-      window.location.href = data.redirect_url;
+    // Étape 1 : envoi de l'audio et transcription.
+    DreamPipeline.show(progressBox, "transcription");
+    const result = await DreamPipeline.post(uploadUrl, csrfToken, formData);
+    if (!result.ok) {
+      DreamPipeline.setStep(progressBox, "transcription", "failed");
+      failSending(result.data.error || "Une erreur inattendue est survenue. Réessayez.");
       return;
     }
-    failSending(data.error || "Une erreur inattendue est survenue. Réessayez.");
+
+    // Le rêve est créé avec son texte : on ne peut plus le renvoyer.
+    sendButton.classList.add("d-none");
+    startButton.classList.add("d-none");
+
+    // Étapes 2 et 3 : analyse puis image, lancées automatiquement.
+    DreamPipeline.continueFrom(result.data, {
+      box: progressBox,
+      csrfToken: csrfToken,
+      onError: showStepError,
+    });
   }
 
-  /** Affiche l'erreur et permet de renvoyer le même enregistrement. */
+  /** La transcription a échoué : on peut renvoyer le même enregistrement. */
   function failSending(message) {
     showError(message);
     sendButton.textContent = "Envoyer mon rêve";
     sendButton.disabled = false;
     startButton.disabled = false;
+  }
+
+  /** Une étape après la transcription a échoué : le rêve est déjà enregistré. */
+  function showStepError(message, dreamUrl) {
+    showError(message);
+    dreamLink.href = dreamUrl;
+    dreamLink.classList.remove("d-none");
   }
 
   // --- Démarrage de la page ------------------------------------------------------------
