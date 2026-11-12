@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Image du rêve indisponible">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2d5c"/>
+      <stop offset="1" stop-color="#6a5a9c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#ffffff" opacity="0.8">
+    <circle cx="90" cy="90" r="3"/>
+    <circle cx="410" cy="70" r="2.5"/>
+    <circle cx="160" cy="170" r="2"/>
+    <circle cx="440" cy="190" r="3"/>
+    <circle cx="70" cy="260" r="2"/>
+    <circle cx="300" cy="120" r="2"/>
+  </g>
+  <path d="M300 150a110 110 0 1 0 70 190a90 90 0 1 1 -70 -190z" fill="#f4e7b0"/>
+  <g fill="#ffffff" opacity="0.25">
+    <ellipse cx="170" cy="400" rx="140" ry="34"/>
+    <ellipse cx="370" cy="430" rx="160" ry="38"/>
+  </g>
+</svg>

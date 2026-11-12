@@ -10,7 +10,7 @@ import httpx
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
-from .groq import GroqRefusedError, GroqUnavailableError, call_groq
+from .api import ApiRefusedError, ApiUnavailableError, call_api
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ def transcribe(audio: UploadedFile) -> str:
     """Transcrit un enregistrement audio en texte français.
 
     Les échecs temporaires (délai dépassé, réseau, serveur surchargé) sont
-    retentés plusieurs fois par `call_groq()`.
+    retentés plusieurs fois par `call_api()`.
 
     Args:
         audio: Le fichier audio à transcrire, déjà validé.
@@ -56,12 +56,17 @@ def transcribe(audio: UploadedFile) -> str:
             de l'erreur peut être affiché tel quel à l'utilisateur.
     """
     try:
-        response = call_groq(lambda: _call_groq(audio), task="Transcription")
-    except GroqRefusedError:
+        response = call_api(
+            lambda: _call_groq(audio),
+            task="Transcription",
+            api_key=settings.GROQ_API_KEY,
+            max_attempts=settings.GROQ_MAX_ATTEMPTS,
+        )
+    except ApiRefusedError:
         raise TranscriptionError(
             "Votre enregistrement n'a pas pu être transcrit. Essayez de le refaire."
         ) from None
-    except GroqUnavailableError:
+    except ApiUnavailableError:
         raise TranscriptionError(UNAVAILABLE_MESSAGE) from None
     return _extract_text(response)
 

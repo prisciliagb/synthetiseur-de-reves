@@ -47,7 +47,7 @@ def groq_response(status_code: int, json: object = None) -> httpx.Response:
 
 
 @override_settings(GROQ_API_KEY="cle-de-test", GROQ_MAX_ATTEMPTS=3)
-@patch("dreams.services.groq.time.sleep")
+@patch("dreams.services.api.time.sleep")
 @patch("dreams.services.transcription.httpx.post")
 class TranscribeServiceTests(SimpleTestCase):
     """Tests du service `transcribe()`."""

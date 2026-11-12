@@ -9,6 +9,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import sys
 from pathlib import Path
 
 import environ
@@ -149,6 +150,45 @@ GROQ_LLM_MODEL = env("GROQ_LLM_MODEL", default="openai/gpt-oss-20b")
 GROQ_TIMEOUT = env.float("GROQ_TIMEOUT", default=60.0)
 # Nombre total de tentatives en cas d'échec temporaire (réseau, surcharge…).
 GROQ_MAX_ATTEMPTS = env.int("GROQ_MAX_ATTEMPTS", default=3)
+
+
+# Replicate (génération de l'image avec FLUX Schnell)
+# https://replicate.com/black-forest-labs/flux-schnell
+
+REPLICATE_API_TOKEN = env("REPLICATE_API_TOKEN", default="")
+REPLICATE_MODEL = env("REPLICATE_MODEL", default="black-forest-labs/flux-schnell")
+# Replicate attend jusqu'à 60 s que l'image soit prête : on attend un peu plus.
+REPLICATE_TIMEOUT = env.float("REPLICATE_TIMEOUT", default=70.0)
+REPLICATE_MAX_ATTEMPTS = env.int("REPLICATE_MAX_ATTEMPTS", default=2)
+# Taille maximale d'une image téléchargée depuis Replicate.
+DREAM_IMAGE_MAX_SIZE = 10 * 1024 * 1024
+
+
+# Cloudinary (stockage persistant des images)
+# Sans CLOUDINARY_URL, les images sont enregistrées sur le disque (media/).
+
+CLOUDINARY_URL = env("CLOUDINARY_URL", default="")
+
+
+# Pendant les tests, aucune API externe n'est jamais appelée et rien n'est
+# envoyé sur Cloudinary, même si les clés sont présentes dans le .env.
+
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+if TESTING:
+    GROQ_API_KEY = REPLICATE_API_TOKEN = CLOUDINARY_URL = ""
+
+STORAGES = {
+    "default": {
+        "BACKEND": (
+            "dreams.storage.CloudinaryStorage"
+            if CLOUDINARY_URL
+            else "django.core.files.storage.FileSystemStorage"
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 
 # Logs : affichés dans la console (et donc dans `docker compose logs`).

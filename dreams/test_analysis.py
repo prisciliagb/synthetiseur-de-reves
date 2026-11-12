@@ -119,7 +119,7 @@ class ParseAnalysisTests(SimpleTestCase):
 
 
 @override_settings(GROQ_API_KEY="cle-de-test", GROQ_MAX_ATTEMPTS=3)
-@patch("dreams.services.groq.time.sleep")
+@patch("dreams.services.api.time.sleep")
 @patch("dreams.services.analysis.httpx.post")
 class AnalyzeDreamTests(SimpleTestCase):
     """Tests du service `analyze_dream()`."""
