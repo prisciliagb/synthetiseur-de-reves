@@ -166,7 +166,7 @@
 
     sendButton.disabled = true;
     startButton.disabled = true;
-    sendButton.textContent = "Transcription en cours… (quelques secondes)";
+    sendButton.textContent = "Transcription et analyse en cours… (quelques secondes)";
     hideMessages();
 
     let response;
