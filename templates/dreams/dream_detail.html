@@ -20,6 +20,26 @@
     <figcaption class="text-muted small mt-1">Image indisponible pour ce rêve.</figcaption>
   </figure>
 {% endif %}
+{# Traitement incomplet (étape échouée ou page quittée) : on peut le relancer #}
+{% if progress.next_step %}
+  <div id="pipeline-resume" class="mb-4"
+       data-next-step="{{ progress.next_step }}"
+       data-next-url="{{ progress.next_url }}"
+       data-redirect-url="{{ progress.redirect_url }}">
+    {% csrf_token %}
+    <div class="alert alert-warning">
+      {% if dream.status == "failed" %}
+        Une étape du traitement n'a pas abouti. Les résultats déjà obtenus sont conservés.
+      {% else %}
+        Le traitement de ce rêve n'est pas terminé.
+      {% endif %}
+    </div>
+    {% include "dreams/_progress.html" %}
+    <div id="pipeline-error" class="alert alert-danger d-none" role="alert"></div>
+    <button id="btn-resume" type="button" class="btn btn-primary">Relancer les étapes manquantes</button>
+  </div>
+  <script src="{% static 'js/pipeline.js' %}" defer></script>
+{% endif %}
 <h2 class="h5">Transcription</h2>
 <p>{{ dream.transcription|default:"Pas encore transcrit."|linebreaksbr }}</p>
 {% endblock %}

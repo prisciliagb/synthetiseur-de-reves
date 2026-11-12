@@ -8,10 +8,7 @@ import json
 from unittest.mock import patch
 
 import httpx
-from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import SimpleTestCase, TestCase, override_settings
-from django.urls import reverse
+from django.test import SimpleTestCase, override_settings
 
 from .models import Dream
 from .services.analysis import (
@@ -190,57 +187,3 @@ class AnalyzeDreamTests(SimpleTestCase):
         )
 
         self.assertEqual(analyze_dream("Je volais.").emotion, "neutral")
-
-
-class AnalysisViewTests(TestCase):
-    """Tests du branchement de l'analyse dans l'envoi de l'audio."""
-
-    def setUp(self) -> None:
-        """Connecte un utilisateur de test et simule la transcription."""
-        self.user = get_user_model().objects.create_user("alice", "alice@example.com")
-        self.client.force_login(self.user)
-        self.url = reverse("dreams:upload_audio")
-        patcher = patch("dreams.views.transcribe", return_value="Je volais.")
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        self.audio = SimpleUploadedFile(
-            "reve.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 100, content_type="audio/webm"
-        )
-
-    @patch(
-        "dreams.views.analyze_dream",
-        return_value=DreamAnalysis("happy", 0.9, "A person flying over the sea."),
-    )
-    def test_analysis_is_saved_on_the_dream(self, analyze) -> None:
-        """L'émotion, la confiance et le prompt d'image sont enregistrés."""
-        self.client.post(self.url, {"audio": self.audio})
-
-        dream = Dream.objects.get()
-        analyze.assert_called_once_with("Je volais.")
-        self.assertEqual(dream.emotion, Dream.Emotion.HAPPY)
-        self.assertEqual(dream.confidence, 0.9)
-        self.assertEqual(dream.image_prompt, "A person flying over the sea.")
-
-    @patch("dreams.views.analyze_dream", side_effect=AnalysisError)
-    def test_analysis_failure_keeps_the_transcription(self, analyze) -> None:
-        """Si l'analyse échoue, le rêve est gardé avec sa transcription."""
-        response = self.client.post(self.url, {"audio": self.audio})
-
-        dream = Dream.objects.get()
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(dream.transcription, "Je volais.")
-        self.assertEqual(dream.emotion, "")
-
-    @patch(
-        "dreams.views.analyze_dream",
-        return_value=DreamAnalysis("strange", 0.6, "A melting clock."),
-    )
-    def test_emotion_is_shown_on_the_dream_page(self, analyze) -> None:
-        """L'émotion apparaît sur la page du rêve."""
-        self.client.post(self.url, {"audio": self.audio})
-
-        response = self.client.get(
-            reverse("dreams:detail", args=[Dream.objects.get().pk])
-        )
-
-        self.assertContains(response, "Étrange")

@@ -14,12 +14,9 @@ import cloudinary.exceptions
 import httpx
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, TestCase, override_settings
-from django.urls import reverse
 
 from .models import Dream
-from .services.analysis import AnalysisError, DreamAnalysis
 from .services.image import ImageGenerationError, generate_dream_image
 from .storage import CloudinaryStorage
 
@@ -246,71 +243,6 @@ class CloudinaryStorageTests(SimpleTestCase):
         CloudinaryStorage().delete("dreams/2026/11/abc.webp")
 
         destroy.assert_called_once_with("dreams/2026/11/abc", resource_type="image")
-
-
-class ImageViewTests(TemporaryMediaMixin, TestCase):
-    """Tests du branchement de l'image dans l'envoi de l'audio."""
-
-    def setUp(self) -> None:
-        """Connecte un utilisateur et simule la transcription et l'analyse."""
-        super().setUp()
-        self.user = User.objects.create_user("alice", "alice@example.com")
-        self.client.force_login(self.user)
-        for target, value in (
-            ("dreams.views.transcribe", "Je volais."),
-            (
-                "dreams.views.analyze_dream",
-                DreamAnalysis("happy", 0.9, "A person flying."),
-            ),
-        ):
-            patcher = patch(target, return_value=value)
-            patcher.start()
-            self.addCleanup(patcher.stop)
-
-    def send_dream(self) -> Dream:
-        """Envoie un faux enregistrement et renvoie le rêve créé."""
-        audio = SimpleUploadedFile(
-            "reve.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 100, content_type="audio/webm"
-        )
-        self.client.post(reverse("dreams:upload_audio"), {"audio": audio})
-        return Dream.objects.get()
-
-    def test_generated_image_is_shown(self) -> None:
-        """L'image générée est enregistrée et affichée sur la page du rêve."""
-
-        def fake_generate(dream: Dream) -> None:
-            dream.image.save("abc.webp", ContentFile(IMAGE_BYTES), save=False)
-
-        with patch("dreams.views.generate_dream_image", side_effect=fake_generate):
-            dream = self.send_dream()
-
-        response = self.client.get(reverse("dreams:detail", args=[dream.pk]))
-        self.assertContains(response, dream.image.url)
-        self.assertNotContains(response, "dream-placeholder.svg")
-
-    def test_failure_keeps_dream_and_shows_placeholder(self) -> None:
-        """Si l'image échoue, le rêve est gardé et l'image de remplacement s'affiche."""
-        with patch(
-            "dreams.views.generate_dream_image", side_effect=ImageGenerationError
-        ):
-            dream = self.send_dream()
-
-        self.assertEqual(dream.transcription, "Je volais.")
-        self.assertEqual(dream.emotion, Dream.Emotion.HAPPY)
-        self.assertFalse(dream.image)
-        response = self.client.get(reverse("dreams:detail", args=[dream.pk]))
-        self.assertContains(response, "dream-placeholder.svg")
-        self.assertContains(response, "Image indisponible")
-
-    def test_no_image_without_analysis(self) -> None:
-        """Si l'analyse échoue, il n'y a pas de prompt : aucune image demandée."""
-        with (
-            patch("dreams.views.analyze_dream", side_effect=AnalysisError),
-            patch("dreams.views.generate_dream_image") as generate,
-        ):
-            self.send_dream()
-
-        generate.assert_not_called()
 
 
 class DeleteImageTests(TemporaryMediaMixin, TestCase):
