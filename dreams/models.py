@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import ClassVar
 
 from django.conf import settings
@@ -91,3 +92,42 @@ class Dream(models.Model):
         if isinstance(storage, CloudinaryStorage):
             return storage.thumbnail_url(self.image.name, self.THUMBNAIL_SIZE)
         return self.image.url
+
+
+class ApiCall(models.Model):
+    """Un appel à une API externe (Groq, Replicate), pour suivre coûts et erreurs.
+
+    Aucune donnée personnelle n'est enregistrée : ni l'utilisateur, ni le
+    texte du rêve. Seulement ce qu'il faut pour surveiller la latence, les
+    erreurs et le budget.
+
+    Attributes:
+        created_at: Date et heure de l'appel.
+        service: Fournisseur appelé (« Groq », « Replicate »).
+        task: Tâche demandée (« Transcription », « Analyse », « Image »…).
+        success: Vrai si l'API a fini par répondre avec succès.
+        http_status: Dernier code HTTP reçu, ou vide si aucune réponse.
+        attempts: Nombre de tentatives (0 si la clé d'API manque).
+        duration_ms: Durée totale, nouvelles tentatives comprises.
+        cost_usd: Coût estimé en dollars, d'après les tarifs des réglages.
+    """
+
+    created_at = models.DateTimeField("date", auto_now_add=True, db_index=True)
+    service = models.CharField("service", max_length=30)
+    task = models.CharField("tâche", max_length=50)
+    success = models.BooleanField("succès")
+    http_status = models.PositiveSmallIntegerField("code HTTP", null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField("tentatives")
+    duration_ms = models.PositiveIntegerField("durée (ms)")
+    cost_usd = models.DecimalField(
+        "coût estimé ($)", max_digits=10, decimal_places=6, default=Decimal(0)
+    )
+
+    class Meta:
+        verbose_name = "appel API"
+        verbose_name_plural = "appels API"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        """Affiche l'appel par son service, sa tâche et sa date."""
+        return f"{self.service} · {self.task} · {self.created_at:%d/%m/%Y %H:%M}"

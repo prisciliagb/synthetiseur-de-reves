@@ -3,11 +3,13 @@
 import os
 import subprocess
 import sys
+from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.utils import get_random_secret_key
-from django.test import SimpleTestCase, TestCase
+from django.db import DatabaseError
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 User = get_user_model()
@@ -131,3 +133,32 @@ class ProductionSettingsTests(SimpleTestCase):
 
         self.assertIn("'synthetiseur.onrender.com'", result.stdout)
         self.assertIn("'https://synthetiseur.onrender.com'", result.stdout)
+
+
+class HealthTests(TestCase):
+    """Tests de l'endpoint `/health`."""
+
+    def test_health_is_public_and_ok(self) -> None:
+        """`/health` répond sans connexion, avec l'état de la base."""
+        response = self.client.get("/health")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "ok")
+        self.assertEqual(response.json()["database"], "ok")
+
+    @override_settings(GROQ_API_KEY="cle-tres-secrete", REPLICATE_API_TOKEN="")
+    def test_health_never_shows_api_keys(self) -> None:
+        """`/health` dit si une clé est configurée, sans jamais l'afficher."""
+        response = self.client.get("/health")
+
+        self.assertEqual(response.json()["services"]["groq"], True)
+        self.assertEqual(response.json()["services"]["replicate"], False)
+        self.assertNotContains(response, "cle-tres-secrete")
+
+    def test_health_reports_database_failure(self) -> None:
+        """Si la base ne répond pas, `/health` renvoie une erreur 503."""
+        with patch("config.views.connection.cursor", side_effect=DatabaseError):
+            response = self.client.get("/health")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["status"], "error")

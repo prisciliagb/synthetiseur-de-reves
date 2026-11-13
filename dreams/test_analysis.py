@@ -8,7 +8,7 @@ import json
 from unittest.mock import patch
 
 import httpx
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 
 from .models import Dream
 from .services.analysis import (
@@ -118,7 +118,7 @@ class ParseAnalysisTests(SimpleTestCase):
 @override_settings(GROQ_API_KEY="cle-de-test", GROQ_MAX_ATTEMPTS=3)
 @patch("dreams.services.api.time.sleep")
 @patch("dreams.services.analysis.httpx.post")
-class AnalyzeDreamTests(SimpleTestCase):
+class AnalyzeDreamTests(TestCase):
     """Tests du service `analyze_dream()`."""
 
     def test_one_call_gives_emotion_and_image_prompt(self, post, sleep) -> None:

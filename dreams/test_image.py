@@ -77,7 +77,7 @@ class TemporaryMediaMixin:
 @patch("dreams.services.api.time.sleep")
 @patch("dreams.services.image.httpx.get")
 @patch("dreams.services.image.httpx.post")
-class GenerateDreamImageTests(TemporaryMediaMixin, SimpleTestCase):
+class GenerateDreamImageTests(TemporaryMediaMixin, TestCase):
     """Tests du service `generate_dream_image()`."""
 
     def make_dream(self) -> Dream:

@@ -68,6 +68,9 @@ def _create_image(prompt: str) -> str:
             task="Image",
             api_key=settings.REPLICATE_API_TOKEN,
             max_attempts=settings.REPLICATE_MAX_ATTEMPTS,
+            service="Replicate",
+            # Prix fixe par image produite.
+            cost=lambda _response: settings.REPLICATE_PRICE_PER_IMAGE,
         )
     except ApiError:
         raise ImageGenerationError("Replicate indisponible.") from None
@@ -140,6 +143,8 @@ def _download(url: str) -> ContentFile:
             task="Téléchargement de l'image",
             api_key=settings.REPLICATE_API_TOKEN,
             max_attempts=settings.REPLICATE_MAX_ATTEMPTS,
+            # Télécharger l'image déjà produite est gratuit : pas de coût.
+            service="Replicate",
         )
     except ApiError:
         raise ImageGenerationError("Téléchargement impossible.") from None

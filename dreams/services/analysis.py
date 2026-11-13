@@ -9,6 +9,7 @@ import json
 import logging
 import math
 from dataclasses import dataclass
+from decimal import Decimal
 
 import httpx
 from django.conf import settings
@@ -88,10 +89,33 @@ def analyze_dream(transcription: str) -> DreamAnalysis:
             task="Analyse",
             api_key=settings.GROQ_API_KEY,
             max_attempts=settings.GROQ_MAX_ATTEMPTS,
+            service="Groq",
+            cost=analysis_cost,
         )
     except ApiError:
         raise AnalysisError from None
     return parse_analysis(_extract_content(response))
+
+
+def analysis_cost(response: httpx.Response) -> Decimal:
+    """Estime le coût d'une analyse d'après le nombre de jetons utilisés.
+
+    Groq indique dans sa réponse les jetons lus (« prompt_tokens ») et écrits
+    (« completion_tokens ») ; chacun a son prix par million.
+
+    Args:
+        response: La réponse de Groq, qui contient « usage ».
+
+    Returns:
+        Le coût estimé, en dollars.
+    """
+    usage = response.json()["usage"]
+    million = Decimal(1_000_000)
+    return (
+        Decimal(usage["prompt_tokens"]) * settings.GROQ_LLM_PRICE_INPUT_PER_MILLION
+        + Decimal(usage["completion_tokens"])
+        * settings.GROQ_LLM_PRICE_OUTPUT_PER_MILLION
+    ) / million
 
 
 def _call_llm(transcription: str) -> httpx.Response:

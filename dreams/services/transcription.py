@@ -5,6 +5,7 @@ appelle seulement `transcribe()` et n'a pas à connaître les détails de l'API.
 """
 
 import logging
+from decimal import Decimal
 
 import httpx
 from django.conf import settings
@@ -61,6 +62,8 @@ def transcribe(audio: UploadedFile) -> str:
             task="Transcription",
             api_key=settings.GROQ_API_KEY,
             max_attempts=settings.GROQ_MAX_ATTEMPTS,
+            service="Groq",
+            cost=transcription_cost,
         )
     except ApiRefusedError:
         raise TranscriptionError(
@@ -90,11 +93,28 @@ def _call_groq(audio: UploadedFile) -> httpx.Response:
         data={
             "model": settings.GROQ_WHISPER_MODEL,
             "language": "fr",
-            "response_format": "json",
+            # « verbose_json » donne aussi la durée de l'audio, pour le coût.
+            "response_format": "verbose_json",
         },
         files={"file": (audio.name, audio.read(), audio.content_type)},
         timeout=settings.GROQ_TIMEOUT,
     )
+
+
+def transcription_cost(response: httpx.Response) -> Decimal:
+    """Estime le coût d'une transcription d'après la durée de l'audio.
+
+    Groq facture Whisper à l'heure d'audio, avec un minimum de 10 secondes.
+
+    Args:
+        response: La réponse de Groq, qui contient la durée (« duration »).
+
+    Returns:
+        Le coût estimé, en dollars.
+    """
+    seconds = Decimal(str(response.json()["duration"]))
+    billed = max(seconds, Decimal(settings.GROQ_WHISPER_MIN_BILLED_SECONDS))
+    return billed / 3600 * settings.GROQ_WHISPER_PRICE_PER_HOUR
 
 
 def _extract_text(response: httpx.Response) -> str:
