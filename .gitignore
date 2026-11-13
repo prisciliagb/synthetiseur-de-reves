@@ -219,3 +219,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Fichiers statiques rassemblés par collectstatic (production)
+staticfiles/

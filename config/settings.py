@@ -19,9 +19,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(BASE_DIR / ".env")
 
+# Vrai pendant `manage.py test` : voir plus bas (clés d'API, sécurité, fichiers).
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+
+# Obligatoire : sans SECRET_KEY, le site refuse de démarrer.
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+# Adresses autorisées à envoyer des formulaires (protection CSRF), en https.
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+
+# Sur Render, l'adresse du site (ex. : mon-site.onrender.com) est fournie
+# automatiquement : on l'autorise sans avoir à l'écrire à la main.
+RENDER_EXTERNAL_HOSTNAME = env("RENDER_EXTERNAL_HOSTNAME", default="")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
 
 # Application definition
@@ -41,6 +54,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Sert les fichiers CSS, JS et images en production (juste après la sécurité).
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -125,6 +140,8 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+# Dossier où `collectstatic` rassemble les fichiers, servis par WhiteNoise.
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Fichiers envoyés ou générés (images des rêves)
 MEDIA_URL = "media/"
@@ -173,7 +190,6 @@ CLOUDINARY_URL = env("CLOUDINARY_URL", default="")
 # Pendant les tests, aucune API externe n'est jamais appelée et rien n'est
 # envoyé sur Cloudinary, même si les clés sont présentes dans le .env.
 
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 if TESTING:
     GROQ_API_KEY = REPLICATE_API_TOKEN = CLOUDINARY_URL = ""
 
@@ -185,10 +201,41 @@ STORAGES = {
             else "django.core.files.storage.FileSystemStorage"
         ),
     },
+    # En production, WhiteNoise compresse les fichiers et ajoute une empreinte
+    # à leur nom (theme.3f2a.css) : le navigateur les garde en cache, et
+    # recharge dès qu'ils changent. Les tests n'ont pas besoin de collectstatic.
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if TESTING
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
     },
 }
+
+
+# Sécurité en production (DEBUG=False)
+# Vérifiable avec : python manage.py check --deploy
+
+if not DEBUG:
+    # Render reçoit le https puis transmet la requête au site : cet en-tête
+    # indique à Django que la connexion d'origine était bien en https.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Toute adresse en http est redirigée vers https (sauf pendant les tests).
+    SECURE_SSL_REDIRECT = not TESTING
+    # Les cookies de session et CSRF ne circulent qu'en https.
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # HSTS : le navigateur retient d'utiliser uniquement https pour ce site.
+    SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=60 * 60 * 24 * 30)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+# Avertissements de `check --deploy` volontairement ignorés :
+# - mail.E001 : l'application n'envoie aucun e-mail (pas de réinitialisation
+#   de mot de passe par e-mail), le serveur d'envoi n'est donc pas configuré ;
+# - security.W021 : la liste « HSTS preload » des navigateurs n'accepte pas
+#   une adresse en .onrender.com, qui appartient à Render.
+SILENCED_SYSTEM_CHECKS = ["mail.E001", "security.W021"]
 
 
 # Logs : affichés dans la console (et donc dans `docker compose logs`).
