@@ -42,4 +42,6 @@
 {% endif %}
 <h2 class="h5">Transcription</h2>
 <p>{{ dream.transcription|default:"Pas encore transcrit."|linebreaksbr }}</p>
+<hr class="my-4">
+<a href="{% url 'dreams:delete' dream.pk %}" class="btn btn-outline-danger">🗑️ Supprimer ce rêve</a>
 {% endblock %}

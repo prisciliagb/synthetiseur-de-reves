@@ -26,6 +26,10 @@
     </div>
   </nav>
   <main class="container py-5">
+    {# Messages de confirmation (ex. : « Votre rêve a bien été supprimé. ») #}
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == "error" %}danger{% else %}{{ message.tags }}{% endif %}" role="status">{{ message }}</div>
+    {% endfor %}
     {% block content %}{% endblock %}
   </main>
 </body>

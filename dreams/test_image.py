@@ -15,6 +15,7 @@ import httpx
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
 
 from .models import Dream
 from .services.image import ImageGenerationError, generate_dream_image
@@ -270,6 +271,15 @@ class DeleteImageTests(TemporaryMediaMixin, TestCase):
 
         self.dream.delete()
 
+        self.assertFalse(self.path.exists())
+
+    def test_delete_page_deletes_image(self) -> None:
+        """Supprimer un rêve depuis le site supprime aussi son image."""
+        self.client.force_login(self.user)
+
+        self.client.post(reverse("dreams:delete", args=[self.dream.pk]))
+
+        self.assertFalse(Dream.objects.exists())
         self.assertFalse(self.path.exists())
 
     def test_deleting_account_deletes_images(self) -> None:

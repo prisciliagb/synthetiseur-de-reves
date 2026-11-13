@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Supprimer un rêve · {{ block.super }}{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 32rem;">
+  <div class="card-body">
+    <h1 class="h4 card-title">Supprimer ce rêve ?</h1>
+    <p>Rêve du <strong>{{ dream.created_at|date:"d/m/Y à H:i" }}</strong></p>
+    <p class="text-muted">« {{ dream.transcription|truncatechars:120|default:"Pas encore transcrit" }} »</p>
+    <div class="alert alert-warning">
+      Cette action est définitive : le texte, l'émotion et l'image de ce rêve seront supprimés.
+    </div>
+    <form method="post" class="d-flex gap-2">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+      <a href="{% url 'dreams:detail' dream.pk %}" class="btn btn-outline-secondary">Annuler</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
