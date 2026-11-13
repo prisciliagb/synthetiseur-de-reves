@@ -1,0 +1,3 @@
+# Outils du test de charge (issue #18), séparés car lourds et inutiles à la CI.
+# Installation : pip install -r requirements-loadtest.txt
+locust==2.47.0

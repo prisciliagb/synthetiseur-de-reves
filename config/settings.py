@@ -239,7 +239,10 @@ STORAGES = {
 # Sécurité en production (DEBUG=False)
 # Vérifiable avec : python manage.py check --deploy
 
-if not DEBUG:
+# Tout passe en https dès que DEBUG=False. HTTPS_ONLY=False ne sert qu'au test
+# de charge en local, en http (voir docs/test-de-charge.md) : jamais en ligne.
+HTTPS_ONLY = env.bool("HTTPS_ONLY", default=not DEBUG)
+if HTTPS_ONLY:
     # Render reçoit le https puis transmet la requête au site : cet en-tête
     # indique à Django que la connexion d'origine était bien en https.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
