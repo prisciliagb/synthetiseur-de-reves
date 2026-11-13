@@ -13,7 +13,7 @@
     <p class="text-muted">Aucun rêve ne correspond à ces filtres.</p>
   {% else %}
     <p class="text-muted">Vos statistiques apparaîtront ici après votre premier rêve.</p>
-    <a href="{% url 'dreams:record' %}" class="btn btn-primary">🎙️ Raconter un rêve</a>
+    <a href="{% url 'dreams:record' %}" class="btn btn-primary">Raconter un rêve</a>
   {% endif %}
 {% else %}
   {# Chiffres clés : l'émotion dominante est mise en avant #}
@@ -29,7 +29,7 @@
         <p class="text-muted small mb-1">Émotion dominante</p>
         {% if stats.dominant %}
           <p class="h3 mb-1">
-            {% for emotion in stats.dominant %}<span aria-hidden="true">{{ emotion.icon }}</span> {{ emotion.label }}{% if not forloop.last %} et {% endif %}{% endfor %}
+            {% for emotion in stats.dominant %}<span class="emotion-{{ emotion.value }} d-inline-flex align-items-center gap-2"><span class="emotion-dot" aria-hidden="true"></span>{{ emotion.label }}</span>{% if not forloop.last %} et {% endif %}{% endfor %}
           </p>
           <p class="text-muted small mb-0">
             {{ stats.dominant.0.count }} rêve{{ stats.dominant.0.count|pluralize }} sur {{ stats.analyzed }} analysé{{ stats.analyzed|pluralize }} ({{ stats.dominant.0.percent }} %){% if stats.dominant|length > 1 %}, ex æquo{% endif %}
@@ -73,7 +73,7 @@
             <thead><tr><th scope="col">Émotion</th><th scope="col" class="text-end">Rêves</th><th scope="col" class="text-end">Part</th></tr></thead>
             <tbody>
               {% for emotion in stats.emotions %}
-                <tr><td>{{ emotion.icon }} {{ emotion.label }}</td><td class="text-end">{{ emotion.count }}</td><td class="text-end">{{ emotion.percent }} %</td></tr>
+                <tr><td>{% include "dreams/_emotion.html" with value=emotion.value label=emotion.label %}</td><td class="text-end">{{ emotion.count }}</td><td class="text-end">{{ emotion.percent }} %</td></tr>
               {% endfor %}
             </tbody>
           </table>

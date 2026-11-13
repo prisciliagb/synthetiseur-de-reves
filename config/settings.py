@@ -105,7 +105,7 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "dreams:list"
-LOGOUT_REDIRECT_URL = "accounts:login"
+LOGOUT_REDIRECT_URL = "home"
 
 
 # Internationalization

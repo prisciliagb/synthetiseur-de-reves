@@ -91,10 +91,10 @@ class LoginLogoutTests(TestCase):
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_logout(self) -> None:
-        """La déconnexion ferme la session et renvoie vers la connexion."""
+        """La déconnexion ferme la session et renvoie vers la page d'accueil."""
         self.client.force_login(self.user)
 
         response = self.client.post(reverse("accounts:logout"))
 
-        self.assertRedirects(response, reverse("accounts:login"))
+        self.assertRedirects(response, reverse("home"))
         self.assertNotIn("_auth_user_id", self.client.session)

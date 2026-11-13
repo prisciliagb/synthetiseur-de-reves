@@ -13,12 +13,13 @@
   }
   const data = JSON.parse(dataElement.textContent);
 
-  // Une seule couleur par graphique : l'émotion dominante en bleu, le reste en gris.
+  // Couleurs du thème (static/css/theme.css) : l'émotion dominante en violet,
+  // le reste en gris clair.
   const COLORS = {
-    main: "#2a78d6",
-    muted: "#c3c2b7",
-    grid: "#e9ecef",
-    text: "#52514e",
+    main: "#5b34c7",
+    muted: "#d6d1e6",
+    grid: "#ece8f6",
+    text: "#5d5680",
   };
 
   Chart.defaults.color = COLORS.text;

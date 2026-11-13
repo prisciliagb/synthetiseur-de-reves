@@ -78,7 +78,9 @@ class UploadStartsPipelineTests(PipelineTestCase):
             "reve.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 100, content_type="audio/webm"
         )
 
-        data = self.client.post(reverse("dreams:upload_audio"), {"audio": audio}).json()
+        data = self.client.post(
+            reverse("dreams:upload_audio"), {"consent": "on", "audio": audio}
+        ).json()
 
         dream = Dream.objects.get()
         self.assertEqual(dream.transcription, "Je volais.")

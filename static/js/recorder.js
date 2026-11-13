@@ -4,7 +4,8 @@
  * 1. « Démarrer » demande l'accès au micro puis lance l'enregistrement.
  * 2. Le chronomètre s'affiche ; l'enregistrement s'arrête seul à la durée maximale.
  * 3. « Arrêter » termine l'enregistrement et affiche un lecteur pour le réécouter.
- * 4. « Envoyer » transmet l'audio au serveur Django, qui le transcrit ; les
+ * 4. Après avoir coché le consentement, « Envoyer » transmet l'audio au
+ *    serveur Django, qui le transcrit ; les
  *    étapes suivantes (analyse, image) s'enchaînent avec pipeline.js, puis
  *    on affiche la page du rêve.
  */
@@ -23,6 +24,7 @@
   const infoBox = document.getElementById("recorder-info");
   const progressBox = document.getElementById("pipeline-progress");
   const dreamLink = document.getElementById("recorder-dream-link");
+  const consentBox = document.getElementById("recorder-consent");
 
   // --- Réglages transmis par Django (attributs data-*) ---------------------
   const uploadUrl = recorderBox.dataset.uploadUrl;
@@ -128,7 +130,7 @@
       recording = new Blob(chunks, { type: mediaRecorder.mimeType });
       player.src = URL.createObjectURL(recording);
       reviewBox.classList.remove("d-none");
-      sendButton.disabled = false;
+      updateSendButton();
     });
     mediaRecorder.start();
 
@@ -149,6 +151,12 @@
     stopButton.disabled = true;
   }
 
+  // --- Consentement ------------------------------------------------------------------
+  /** « Envoyer » n'est actif que si un enregistrement existe et que la case est cochée. */
+  function updateSendButton() {
+    sendButton.disabled = !(recording && consentBox.checked);
+  }
+
   // --- Envoi au serveur -----------------------------------------------------------
   function fileExtension(type) {
     if (type.includes("mp4")) return "mp4";
@@ -156,7 +164,7 @@
   }
 
   async function sendRecording() {
-    if (!recording) {
+    if (!recording || !consentBox.checked) {
       return;
     }
     if (recording.size > maxSize) {
@@ -165,10 +173,12 @@
     }
 
     const formData = new FormData();
+    formData.append("consent", "on");
     formData.append("audio", recording, "reve." + fileExtension(recording.type));
 
     sendButton.disabled = true;
     startButton.disabled = true;
+    consentBox.disabled = true;
     sendButton.textContent = "Traitement en cours…";
     hideMessages();
 
@@ -197,7 +207,8 @@
   function failSending(message) {
     showError(message);
     sendButton.textContent = "Envoyer mon rêve";
-    sendButton.disabled = false;
+    consentBox.disabled = false;
+    updateSendButton();
     startButton.disabled = false;
   }
 
@@ -220,4 +231,5 @@
   startButton.addEventListener("click", startRecording);
   stopButton.addEventListener("click", stopRecording);
   sendButton.addEventListener("click", sendRecording);
+  consentBox.addEventListener("change", updateSendButton);
 })();
