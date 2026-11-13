@@ -1,5 +1,6 @@
 -r requirements.txt
 cfgv==3.5.0
+coverage==7.17.3
 distlib==0.4.4
 filelock==4.2.9
 identify==2.6.20
