@@ -9,7 +9,7 @@ from django.views import View
 from django.views.generic import DeleteView, DetailView, ListView, TemplateView
 from django.views.generic.detail import SingleObjectMixin
 
-from .forms import AudioRecordingForm
+from .forms import AudioRecordingForm, DreamFilterForm
 from .models import Dream
 from .services.pipeline import ANALYSIS, IMAGE, StepError, progress, run_step
 from .services.transcription import TranscriptionError, transcribe
@@ -38,6 +38,27 @@ class DreamListView(UserDreamsMixin, ListView):
     model = Dream
     context_object_name = "dreams"
     paginate_by = 10
+
+    def get_queryset(self) -> QuerySet[Dream]:
+        """Renvoie les rêves de l'utilisateur, filtrés selon le formulaire.
+
+        Returns:
+            Les rêves qui correspondent aux filtres de l'adresse (?start=…).
+        """
+        # Sans paramètre dans l'adresse, le formulaire est vide : pas d'erreur.
+        self.filter_form = DreamFilterForm(self.request.GET or None)
+        return self.filter_form.filter(super().get_queryset())
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        """Ajoute le formulaire de filtres au contexte.
+
+        Returns:
+            Le contexte du template, avec les filtres.
+        """
+        context = super().get_context_data(**kwargs)
+        context["filter_form"] = self.filter_form
+        context["is_filtering"] = self.filter_form.is_filtering()
+        return context
 
 
 class DreamDetailView(UserDreamsMixin, DetailView):

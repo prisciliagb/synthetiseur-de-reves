@@ -1,6 +1,11 @@
+from typing import Any
+
 from django import forms
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
+from django.db.models import QuerySet
+
+from .models import Dream
 
 # Signature (premiers octets) d'un fichier WebM, le format d'enregistrement
 # de Chrome, Firefox et Edge. Safari enregistre en MP4 (repéré par « ftyp »).
@@ -58,3 +63,84 @@ class AudioRecordingForm(forms.Form):
                 "Ce fichier n'est pas un enregistrement audio valide."
             )
         return audio
+
+
+def _emotion_choices() -> list[tuple[str, str]]:
+    """Renvoie les émotions proposées dans le filtre, chacune avec son emoji.
+
+    Returns:
+        Les choix de la liste déroulante, en commençant par « Toutes ».
+    """
+    choices = [("", "Toutes les émotions")]
+    for value, label in Dream.Emotion.choices:
+        choices.append((value, f"{Dream.EMOTION_ICONS[value]} {label}"))
+    return choices
+
+
+class DreamFilterForm(forms.Form):
+    """Filtres de l'historique : période (du… au…) et émotion.
+
+    Tous les champs sont facultatifs et se combinent. Les filtres passent dans
+    l'adresse de la page (méthode GET), ce qui permet de les garder en
+    changeant de page et de les réutiliser pour les statistiques.
+    """
+
+    start = forms.DateField(
+        label="Du",
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+    )
+    end = forms.DateField(
+        label="Au",
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+    )
+    emotion = forms.ChoiceField(
+        label="Émotion", required=False, choices=_emotion_choices
+    )
+
+    def clean(self) -> dict[str, Any]:
+        """Vérifie que la période est dans le bon ordre.
+
+        Returns:
+            Les données validées.
+
+        Raises:
+            ValidationError: Si la date de début est après la date de fin.
+        """
+        cleaned_data = super().clean()
+        start = cleaned_data.get("start")
+        end = cleaned_data.get("end")
+        if start and end and start > end:
+            raise forms.ValidationError(
+                "La date de début doit être avant la date de fin."
+            )
+        return cleaned_data
+
+    def filter(self, dreams: QuerySet[Dream]) -> QuerySet[Dream]:
+        """Applique les filtres choisis à une liste de rêves.
+
+        Si les filtres sont invalides, la liste est renvoyée sans filtre : le
+        formulaire affiche alors l'erreur.
+
+        Args:
+            dreams: Les rêves à filtrer.
+
+        Returns:
+            Les rêves qui correspondent à tous les filtres remplis.
+        """
+        if not self.is_valid():
+            return dreams
+        data = self.cleaned_data
+        # « __date » compare le jour, dans le fuseau horaire du site (Paris).
+        if data["start"]:
+            dreams = dreams.filter(created_at__date__gte=data["start"])
+        if data["end"]:
+            dreams = dreams.filter(created_at__date__lte=data["end"])
+        if data["emotion"]:
+            dreams = dreams.filter(emotion=data["emotion"])
+        return dreams
+
+    def is_filtering(self) -> bool:
+        """Indique si au moins un filtre valide est rempli."""
+        return self.is_valid() and any(self.cleaned_data.values())

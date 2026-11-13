@@ -1,5 +1,5 @@
 import tempfile
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -226,6 +226,111 @@ class DreamHistoryTests(TestCase):
         for emotion in Dream.Emotion:
             with self.subTest(emotion=emotion):
                 self.assertNotEqual(Dream(emotion=emotion).emotion_icon, "")
+
+
+class DreamFilterTests(TestCase):
+    """Tests des filtres de l'historique : période et émotion."""
+
+    def setUp(self) -> None:
+        """Crée quatre rêves à des dates et émotions différentes."""
+        self.user = User.objects.create_user("alice", "alice@example.com")
+        self.client.force_login(self.user)
+        self.url = reverse("dreams:list")
+        self.october_scary = self.create_dream(date(2026, 10, 15), "scary")
+        self.november_scary = self.create_dream(date(2026, 11, 2), "scary")
+        self.november_happy = self.create_dream(date(2026, 11, 10), "happy")
+        self.december_sad = self.create_dream(date(2026, 12, 1), "sad")
+
+    def create_dream(self, day: date, emotion: str) -> Dream:
+        """Crée un rêve daté de `day` à 8 h (heure de Paris).
+
+        Args:
+            day: Le jour du rêve.
+            emotion: L'émotion du rêve.
+
+        Returns:
+            Le rêve créé.
+        """
+        dream = Dream.objects.create(user=self.user, emotion=emotion)
+        created_at = timezone.make_aware(datetime.combine(day, time(8)))
+        Dream.objects.filter(pk=dream.pk).update(created_at=created_at)
+        return dream
+
+    def get_dreams(self, **filters: str) -> list[Dream]:
+        """Affiche l'historique avec ces filtres et renvoie les rêves listés."""
+        response = self.client.get(self.url, filters)
+        return list(response.context["dreams"])
+
+    def test_without_filter_all_dreams_are_listed(self) -> None:
+        """Sans filtre, tous les rêves sont affichés."""
+        self.assertEqual(len(self.get_dreams()), 4)
+
+    def test_filter_by_period(self) -> None:
+        """Seuls les rêves de la période sont affichés, bornes comprises."""
+        dreams = self.get_dreams(start="2026-11-02", end="2026-11-10")
+
+        self.assertEqual(dreams, [self.november_happy, self.november_scary])
+
+    def test_filter_with_start_date_only(self) -> None:
+        """Avec seulement « Du », on garde les rêves à partir de cette date."""
+        dreams = self.get_dreams(start="2026-11-05")
+
+        self.assertEqual(dreams, [self.december_sad, self.november_happy])
+
+    def test_filter_by_emotion(self) -> None:
+        """Seuls les rêves de l'émotion choisie sont affichés."""
+        dreams = self.get_dreams(emotion="scary")
+
+        self.assertEqual(dreams, [self.november_scary, self.october_scary])
+
+    def test_filters_are_combined(self) -> None:
+        """Période et émotion se combinent."""
+        dreams = self.get_dreams(start="2026-11-01", end="2026-11-30", emotion="scary")
+
+        self.assertEqual(dreams, [self.november_scary])
+
+    def test_start_after_end_shows_an_error(self) -> None:
+        """Une période à l'envers affiche une erreur et ne filtre pas."""
+        response = self.client.get(
+            self.url, {"start": "2026-12-01", "end": "2026-11-01"}
+        )
+
+        self.assertContains(response, "La date de début doit être avant")
+        self.assertEqual(len(response.context["dreams"]), 4)
+
+    def test_invalid_values_show_an_error(self) -> None:
+        """Une date ou une émotion inconnue affiche une erreur, sans planter."""
+        response = self.client.get(
+            self.url, {"start": "pas-une-date", "emotion": "joie"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["filter_form"].errors)
+        self.assertEqual(len(response.context["dreams"]), 4)
+
+    def test_no_result_shows_a_message(self) -> None:
+        """Si aucun rêve ne correspond, la page l'indique."""
+        response = self.client.get(self.url, {"emotion": "strange"})
+
+        self.assertContains(response, "Aucun rêve ne correspond à ces filtres.")
+
+    def test_filters_are_kept_when_changing_page(self) -> None:
+        """Les liens de pagination gardent les filtres."""
+        for _ in range(11):
+            self.create_dream(date(2026, 11, 20), "scary")
+
+        response = self.client.get(self.url, {"emotion": "scary"})
+
+        self.assertContains(response, "?emotion=scary&amp;page=2")
+
+    def test_filters_only_apply_to_own_dreams(self) -> None:
+        """Les filtres ne font jamais apparaître les rêves des autres."""
+        bob = User.objects.create_user("bob", "bob@example.com")
+        Dream.objects.create(user=bob, emotion="scary")
+
+        dreams = self.get_dreams(emotion="scary")
+
+        self.assertEqual(dreams, [self.november_scary, self.october_scary])
 
 
 class DreamDeleteTests(TestCase):
