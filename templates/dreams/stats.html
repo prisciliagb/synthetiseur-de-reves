@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Statistiques · {{ block.super }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">Statistiques</h1>
+{% if stats.total or is_filtering or filter_form.errors %}
+  {% url 'dreams:stats' as reset_url %}
+  {% include "dreams/_filters.html" %}
+{% endif %}
+
+{% if not stats.total %}
+  {% if is_filtering %}
+    <p class="text-muted">Aucun rêve ne correspond à ces filtres.</p>
+  {% else %}
+    <p class="text-muted">Vos statistiques apparaîtront ici après votre premier rêve.</p>
+    <a href="{% url 'dreams:record' %}" class="btn btn-primary">🎙️ Raconter un rêve</a>
+  {% endif %}
+{% else %}
+  {# Chiffres clés : l'émotion dominante est mise en avant #}
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card h-100"><div class="card-body">
+        <p class="text-muted small mb-1">Rêves</p>
+        <p class="display-6 mb-0">{{ stats.total }}</p>
+      </div></div>
+    </div>
+    <div class="col-md-8">
+      <div class="card h-100 border-primary"><div class="card-body" id="dominant-emotion">
+        <p class="text-muted small mb-1">Émotion dominante</p>
+        {% if stats.dominant %}
+          <p class="h3 mb-1">
+            {% for emotion in stats.dominant %}<span aria-hidden="true">{{ emotion.icon }}</span> {{ emotion.label }}{% if not forloop.last %} et {% endif %}{% endfor %}
+          </p>
+          <p class="text-muted small mb-0">
+            {{ stats.dominant.0.count }} rêve{{ stats.dominant.0.count|pluralize }} sur {{ stats.analyzed }} analysé{{ stats.analyzed|pluralize }} ({{ stats.dominant.0.percent }} %){% if stats.dominant|length > 1 %}, ex æquo{% endif %}
+          </p>
+        {% else %}
+          <p class="mb-0 text-muted">Aucun rêve n'a encore été analysé.</p>
+        {% endif %}
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card h-100"><div class="card-body">
+        <h2 class="h6">Rêves par semaine</h2>
+        <div class="position-relative" style="height: 260px;">
+          <canvas id="chart-weeks" role="img" aria-label="Nombre de rêves par semaine"></canvas>
+        </div>
+        <details class="mt-2 small">
+          <summary>Voir les données</summary>
+          <table class="table table-sm mt-2 mb-0">
+            <thead><tr><th scope="col">Semaine du</th><th scope="col" class="text-end">Rêves</th></tr></thead>
+            <tbody>
+              {% for monday, count in stats.weeks %}
+                <tr><td>{{ monday|date:"d/m/Y" }}</td><td class="text-end">{{ count }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </details>
+      </div></div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card h-100"><div class="card-body">
+        <h2 class="h6">Répartition des émotions</h2>
+        <div class="position-relative" style="height: 260px;">
+          <canvas id="chart-emotions" role="img" aria-label="Nombre de rêves par émotion"></canvas>
+        </div>
+        <details class="mt-2 small">
+          <summary>Voir les données</summary>
+          <table class="table table-sm mt-2 mb-0">
+            <thead><tr><th scope="col">Émotion</th><th scope="col" class="text-end">Rêves</th><th scope="col" class="text-end">Part</th></tr></thead>
+            <tbody>
+              {% for emotion in stats.emotions %}
+                <tr><td>{{ emotion.icon }} {{ emotion.label }}</td><td class="text-end">{{ emotion.count }}</td><td class="text-end">{{ emotion.percent }} %</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </details>
+      </div></div>
+    </div>
+  </div>
+
+  {{ chart_data|json_script:"stats-data" }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="{% static 'js/stats.js' %}" defer></script>
+{% endif %}
+{% endblock %}
