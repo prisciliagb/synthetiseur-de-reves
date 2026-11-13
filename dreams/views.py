@@ -92,7 +92,7 @@ class DreamStatsView(UserDreamsMixin, TemplateView):
                 "counts": [count for _, count in stats.weeks],
             },
             "emotions": {
-                "labels": [f"{e.icon} {e.label}" for e in stats.emotions],
+                "labels": [e.label for e in stats.emotions],
                 "counts": [e.count for e in stats.emotions],
                 "dominant": [e.value in dominant_values for e in stats.emotions],
             },
@@ -165,19 +165,20 @@ class AudioUploadView(View):
         """Transcrit l'enregistrement reçu et crée le rêve correspondant.
 
         Args:
-            request: La requête contenant le fichier « audio ».
+            request: La requête contenant le fichier « audio » et le
+                consentement (« consent »).
 
         Returns:
             Une réponse JSON :
             - 200 avec la prochaine étape si la transcription a réussi ;
-            - 400 si l'audio est invalide ;
+            - 400 si le consentement manque ou si l'audio est invalide ;
             - 502 si la transcription a échoué.
         """
-        form = AudioRecordingForm(files=request.FILES)
+        form = AudioRecordingForm(data=request.POST, files=request.FILES)
         if not form.is_valid():
-            return JsonResponse(
-                {"ok": False, "error": form.errors["audio"][0]}, status=400
-            )
+            # Le premier problème trouvé : consentement manquant, puis audio.
+            first_error = next(iter(form.errors.values()))[0]
+            return JsonResponse({"ok": False, "error": first_error}, status=400)
 
         audio = form.cleaned_data["audio"]
         try:

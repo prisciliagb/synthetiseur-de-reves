@@ -31,16 +31,6 @@ class Dream(models.Model):
         STRANGE = "strange", "Étrange"
         NEUTRAL = "neutral", "Neutre"
 
-    # Icône affichée à côté de chaque émotion dans l'historique.
-    EMOTION_ICONS: ClassVar[dict[str, str]] = {
-        Emotion.HAPPY: "😊",
-        Emotion.SAD: "😢",
-        Emotion.STRESSFUL: "😰",
-        Emotion.SCARY: "😱",
-        Emotion.STRANGE: "🌀",
-        Emotion.NEUTRAL: "😐",
-    }
-
     # Côté (en pixels) de la miniature de l'image dans l'historique.
     THUMBNAIL_SIZE: ClassVar[int] = 120
 
@@ -83,11 +73,6 @@ class Dream(models.Model):
     def __str__(self) -> str:
         """Affiche le rêve par son auteur et sa date."""
         return f"Rêve de {self.user} du {self.created_at:%d/%m/%Y}"
-
-    @property
-    def emotion_icon(self) -> str:
-        """Renvoie l'emoji de l'émotion, ou une chaîne vide si elle est inconnue."""
-        return self.EMOTION_ICONS.get(self.emotion, "")
 
     @property
     def thumbnail_url(self) -> str:

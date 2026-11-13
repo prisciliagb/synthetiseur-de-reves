@@ -3,6 +3,7 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -11,6 +12,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from .forms import CONSENT_REQUIRED_MESSAGE
 from .models import Dream
 
 User = get_user_model()
@@ -212,20 +214,22 @@ class DreamHistoryTests(TestCase):
         self.assertContains(response, "/c_fill,h_120,w_120/")
         self.assertContains(response, "dreams/2026/11/abc.webp")
 
-    def test_emotion_is_shown_with_its_icon(self) -> None:
-        """L'émotion d'un rêve est affichée avec son emoji."""
+    def test_emotion_is_shown_with_its_color(self) -> None:
+        """L'émotion d'un rêve est affichée avec son nom et sa pastille de couleur."""
         Dream.objects.create(user=self.user, emotion=Dream.Emotion.SCARY)
 
         response = self.client.get(self.url)
 
-        self.assertContains(response, "😱")
+        self.assertContains(response, "emotion-badge emotion-scary")
         self.assertContains(response, "Effrayant")
 
-    def test_every_emotion_has_an_icon(self) -> None:
-        """Chaque émotion possible a son emoji (aucun oubli si on en ajoute une)."""
+    def test_every_emotion_has_a_color(self) -> None:
+        """Chaque émotion a sa couleur dans le thème (aucun oubli si on en ajoute)."""
+        theme = (settings.BASE_DIR / "static" / "css" / "theme.css").read_text()
+
         for emotion in Dream.Emotion:
             with self.subTest(emotion=emotion):
-                self.assertNotEqual(Dream(emotion=emotion).emotion_icon, "")
+                self.assertIn(f".emotion-{emotion.value} {{", theme)
 
 
 class DreamFilterTests(TestCase):
@@ -436,6 +440,18 @@ class RecordPageTests(TestCase):
         self.assertContains(response, 'data-max-seconds="300"')
         self.assertContains(response, "js/recorder.js")
 
+    def test_page_asks_for_consent_before_sending(self) -> None:
+        """La page demande le consentement, et « Envoyer » est désactivé au départ."""
+        user = User.objects.create_user("alice", "alice@example.com")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("dreams:record"))
+
+        self.assertContains(response, 'id="recorder-consent"')
+        self.assertContains(response, "J'accepte que cet enregistrement soit envoyé")
+        self.assertContains(response, 'id="btn-send" type="button"')
+        self.assertContains(response, 'class="btn btn-primary w-100" disabled>')
+
 
 class AudioUploadTests(TestCase):
     """Tests de la réception de l'enregistrement audio.
@@ -456,7 +472,9 @@ class AudioUploadTests(TestCase):
         """Un visiteur non connecté ne peut pas envoyer d'audio."""
         self.client.logout()
 
-        response = self.client.post(self.url, {"audio": fake_audio(WEBM_HEADER)})
+        response = self.client.post(
+            self.url, {"consent": "on", "audio": fake_audio(WEBM_HEADER)}
+        )
 
         self.assertEqual(response.status_code, 302)
 
@@ -470,14 +488,16 @@ class AudioUploadTests(TestCase):
         """Les formats produits par les navigateurs sont acceptés."""
         for header in (WEBM_HEADER, MP4_HEADER):
             with self.subTest(header=header):
-                response = self.client.post(self.url, {"audio": fake_audio(header)})
+                response = self.client.post(
+                    self.url, {"consent": "on", "audio": fake_audio(header)}
+                )
 
                 self.assertEqual(response.status_code, 200)
                 self.assertTrue(response.json()["ok"])
 
     def test_missing_audio_is_refused(self) -> None:
         """Une requête sans fichier est refusée avec un message clair."""
-        response = self.client.post(self.url)
+        response = self.client.post(self.url, {"consent": "on"})
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"], "Aucun enregistrement n'a été reçu.")
@@ -485,7 +505,11 @@ class AudioUploadTests(TestCase):
     def test_non_audio_file_is_refused(self) -> None:
         """Un fichier qui n'est pas de l'audio est refusé, même renommé en .webm."""
         response = self.client.post(
-            self.url, {"audio": fake_audio(b"Ceci est un texte", name="faux.webm")}
+            self.url,
+            {
+                "consent": "on",
+                "audio": fake_audio(b"Ceci est un texte", name="faux.webm"),
+            },
         )
 
         self.assertEqual(response.status_code, 400)
@@ -494,7 +518,9 @@ class AudioUploadTests(TestCase):
     @override_settings(DREAM_AUDIO_MAX_SIZE=50)
     def test_too_large_audio_is_refused(self) -> None:
         """Un enregistrement plus lourd que la limite est refusé."""
-        response = self.client.post(self.url, {"audio": fake_audio(WEBM_HEADER)})
+        response = self.client.post(
+            self.url, {"consent": "on", "audio": fake_audio(WEBM_HEADER)}
+        )
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("trop lourd", response.json()["error"])
@@ -503,13 +529,26 @@ class AudioUploadTests(TestCase):
         """Seule la transcription est conservée, jamais l'audio (RGPD)."""
         with tempfile.TemporaryDirectory() as media_root:
             with override_settings(MEDIA_ROOT=media_root):
-                self.client.post(self.url, {"audio": fake_audio(WEBM_HEADER)})
+                self.client.post(
+                    self.url, {"consent": "on", "audio": fake_audio(WEBM_HEADER)}
+                )
 
             self.assertEqual(list(Path(media_root).iterdir()), [])
         self.assertEqual(Dream.objects.get().transcription, "Je volais.")
 
+    def test_audio_without_consent_is_refused(self) -> None:
+        """Sans consentement, l'audio est refusé et jamais envoyé à Groq (RGPD)."""
+        response = self.client.post(self.url, {"audio": fake_audio(WEBM_HEADER)})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], CONSENT_REQUIRED_MESSAGE)
+        self.transcribe.assert_not_called()
+        self.assertFalse(Dream.objects.exists())
+
     def test_invalid_audio_is_never_sent_to_groq(self) -> None:
         """Un fichier refusé n'est jamais envoyé à l'API de transcription."""
-        self.client.post(self.url, {"audio": fake_audio(b"Ceci est un texte")})
+        self.client.post(
+            self.url, {"consent": "on", "audio": fake_audio(b"Ceci est un texte")}
+        )
 
         self.transcribe.assert_not_called()

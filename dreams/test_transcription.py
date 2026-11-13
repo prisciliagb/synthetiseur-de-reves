@@ -149,7 +149,7 @@ class TranscriptionViewTests(TestCase):
     @patch("dreams.views.transcribe", return_value="Je volais au-dessus de la mer.")
     def test_success_creates_dream_and_redirects_to_it(self, transcribe) -> None:
         """Une transcription réussie crée le rêve et renvoie son adresse."""
-        response = self.client.post(self.url, {"audio": fake_audio()})
+        response = self.client.post(self.url, {"consent": "on", "audio": fake_audio()})
 
         dream = Dream.objects.get()
         self.assertEqual(dream.user, self.user)
@@ -164,7 +164,7 @@ class TranscriptionViewTests(TestCase):
     )
     def test_failure_returns_message_and_creates_nothing(self, transcribe) -> None:
         """Un échec renvoie un message compréhensible et ne crée aucun rêve."""
-        response = self.client.post(self.url, {"audio": fake_audio()})
+        response = self.client.post(self.url, {"consent": "on", "audio": fake_audio()})
 
         self.assertEqual(response.status_code, 502)
         self.assertEqual(
@@ -184,7 +184,7 @@ class TranscriptionViewTests(TestCase):
             raise TranscriptionError("Échec simulé.")
 
         with patch("dreams.views.transcribe", side_effect=fake_transcribe):
-            self.client.post(self.url, {"audio": fake_audio()})
+            self.client.post(self.url, {"consent": "on", "audio": fake_audio()})
 
         self.assertEqual(len(seen_paths), 1)
         self.assertFalse(os.path.exists(seen_paths[0]))

@@ -34,9 +34,26 @@ def detect_audio_format(audio: UploadedFile) -> str | None:
     return None
 
 
-class AudioRecordingForm(forms.Form):
-    """Contrôle l'enregistrement audio envoyé par la page « Raconter un rêve »."""
+# Message affiché si l'enregistrement est envoyé sans consentement.
+CONSENT_REQUIRED_MESSAGE = (
+    "Vous devez accepter l'envoi de votre enregistrement au service de "
+    "transcription pour pouvoir l'envoyer."
+)
 
+
+class AudioRecordingForm(forms.Form):
+    """Contrôle l'enregistrement audio envoyé par la page « Raconter un rêve ».
+
+    Le consentement est vérifié en premier : sans lui, l'audio n'est même pas
+    examiné, et il n'est jamais envoyé à l'API de transcription. Le
+    JavaScript bloque déjà l'envoi, mais on ne fait jamais confiance au
+    navigateur : le serveur vérifie lui aussi.
+    """
+
+    consent = forms.BooleanField(
+        required=True,
+        error_messages={"required": CONSENT_REQUIRED_MESSAGE},
+    )
     audio = forms.FileField(
         error_messages={"required": "Aucun enregistrement n'a été reçu."}
     )
@@ -66,15 +83,12 @@ class AudioRecordingForm(forms.Form):
 
 
 def _emotion_choices() -> list[tuple[str, str]]:
-    """Renvoie les émotions proposées dans le filtre, chacune avec son emoji.
+    """Renvoie les émotions proposées dans le filtre.
 
     Returns:
         Les choix de la liste déroulante, en commençant par « Toutes ».
     """
-    choices = [("", "Toutes les émotions")]
-    for value, label in Dream.Emotion.choices:
-        choices.append((value, f"{Dream.EMOTION_ICONS[value]} {label}"))
-    return choices
+    return [("", "Toutes les émotions"), *Dream.Emotion.choices]
 
 
 class DreamFilterForm(forms.Form):

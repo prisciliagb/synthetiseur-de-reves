@@ -7,7 +7,7 @@
 <p>
   <span class="badge text-bg-secondary">{{ dream.get_status_display }}</span>
   {% if dream.emotion %}
-    <span class="badge text-bg-info">{{ dream.get_emotion_display }}</span>
+    {% include "dreams/_emotion.html" with value=dream.emotion label=dream.get_emotion_display %}
     {% if dream.confidence is not None %}<small class="text-muted">confiance : {% widthratio dream.confidence 1 100 %} %</small>{% endif %}
   {% endif %}
 </p>
@@ -43,5 +43,5 @@
 <h2 class="h5">Transcription</h2>
 <p>{{ dream.transcription|default:"Pas encore transcrit."|linebreaksbr }}</p>
 <hr class="my-4">
-<a href="{% url 'dreams:delete' dream.pk %}" class="btn btn-outline-danger">🗑️ Supprimer ce rêve</a>
+<a href="{% url 'dreams:delete' dream.pk %}" class="btn btn-outline-danger">Supprimer ce rêve</a>
 {% endblock %}

@@ -4,13 +4,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import RedirectView
+
+from .views import HomeView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("comptes/", include("accounts.urls")),
     path("reves/", include("dreams.urls")),
-    path("", RedirectView.as_view(pattern_name="dreams:list"), name="home"),
+    path("", HomeView.as_view(), name="home"),
 ]
 
 # En développement, Django sert lui-même les images des rêves.

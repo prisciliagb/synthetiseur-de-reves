@@ -21,14 +21,12 @@ class EmotionCount:
     Attributes:
         value: La valeur enregistrée en base (ex. : « scary »).
         label: Le nom affiché (ex. : « Effrayant »).
-        icon: L'emoji de l'émotion.
         count: Le nombre de rêves de cette émotion.
         percent: La part de ces rêves parmi les rêves analysés, en %.
     """
 
     value: str
     label: str
-    icon: str
     count: int
     percent: int
 
@@ -103,7 +101,6 @@ def emotion_counts(dreams: QuerySet[Dream]) -> list[EmotionCount]:
         EmotionCount(
             value=value,
             label=label,
-            icon=Dream.EMOTION_ICONS[value],
             count=counts.get(value, 0),
             percent=round(100 * counts.get(value, 0) / analyzed) if analyzed else 0,
         )

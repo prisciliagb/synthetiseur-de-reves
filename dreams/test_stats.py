@@ -88,7 +88,6 @@ class ComputeStatsTests(StatsTestMixin, TestCase):
         dominant = self.stats().dominant
 
         self.assertEqual([e.value for e in dominant], ["scary"])
-        self.assertEqual(dominant[0].icon, "😱")
 
     def test_tie_gives_several_dominant_emotions(self) -> None:
         """En cas d'égalité, toutes les émotions à égalité sont dominantes."""
@@ -150,7 +149,7 @@ class StatsPageTests(StatsTestMixin, TestCase):
         self.assertContains(response, 'id="stats-data"')
         data = self.chart_data(response)
         self.assertEqual(data["weeks"]["counts"], [2, 1])
-        self.assertEqual(data["emotions"]["labels"][0], "😱 Effrayant")
+        self.assertEqual(data["emotions"]["labels"][0], "Effrayant")
         self.assertEqual(data["emotions"]["dominant"][:2], [True, False])
 
     def test_chart_data_is_valid_json_in_page(self) -> None:

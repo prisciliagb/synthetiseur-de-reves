@@ -4,7 +4,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h1 class="h3 mb-0">Mes rêves</h1>
-  <a href="{% url 'dreams:record' %}" class="btn btn-primary">🎙️ Raconter un rêve</a>
+  <a href="{% url 'dreams:record' %}" class="btn btn-primary">Raconter un rêve</a>
 </div>
 {# Filtres : affichés dès qu'il y a des rêves, ou qu'un filtre est en cours #}
 {% if dreams or is_filtering or filter_form.errors %}
@@ -27,7 +27,7 @@
         </span>
         <span class="text-end flex-shrink-0">
           {% if dream.emotion %}
-            <span class="badge text-bg-info"><span aria-hidden="true">{{ dream.emotion_icon }}</span> {{ dream.get_emotion_display }}</span>
+            {% include "dreams/_emotion.html" with value=dream.emotion label=dream.get_emotion_display %}
           {% endif %}
           {% if dream.status != "done" %}
             <span class="badge text-bg-secondary">{{ dream.get_status_display }}</span>

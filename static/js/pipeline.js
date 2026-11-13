@@ -16,11 +16,19 @@ window.DreamPipeline = (function () {
   // Garde-fou : jamais plus de requêtes que d'étapes, même si le serveur se trompe.
   const MAX_REQUESTS = STEPS.length;
 
+  // Icônes SVG : cercle vide (à venir), roue (en cours), coche (faite), croix (échec).
   const ICONS = {
-    pending: '<span class="text-muted">○</span>',
+    pending: '<svg width="16" height="16" viewBox="0 0 16 16" class="text-muted">'
+      + '<circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>',
     current: '<span class="spinner-border spinner-border-sm text-primary" role="status"></span>',
-    done: "✅",
-    failed: "❌",
+    done: '<svg width="16" height="16" viewBox="0 0 16 16" class="text-success">'
+      + '<circle cx="8" cy="8" r="8" fill="currentColor"/>'
+      + '<path d="M4.8 8.3l2.1 2.1 4.3-4.6" fill="none" stroke="#fff" stroke-width="1.8" '
+      + 'stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    failed: '<svg width="16" height="16" viewBox="0 0 16 16" class="text-danger">'
+      + '<circle cx="8" cy="8" r="8" fill="currentColor"/>'
+      + '<path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.8" '
+      + 'stroke-linecap="round"/></svg>',
   };
 
   /** Affiche l'état d'une étape : pending, current, done ou failed. */
