@@ -173,6 +173,25 @@ class AnalyzeDreamTests(TestCase):
         self.assertEqual(analyze_dream("Je pleurais.").emotion, "sad")
         self.assertEqual(post.call_count, 2)
 
+    def test_retries_after_timeout(self, post, sleep) -> None:
+        """Après un délai dépassé, une nouvelle tentative est faite."""
+        post.side_effect = [
+            httpx.ReadTimeout("trop long"),
+            llm_response('{"emotion": "scary"}'),
+        ]
+
+        self.assertEqual(analyze_dream("Je fuyais.").emotion, "scary")
+        self.assertEqual(post.call_count, 2)
+
+    def test_quota_exceeded_raises_analysis_error(self, post, sleep) -> None:
+        """Quota dépassé (429 à chaque essai) : une AnalysisError est levée."""
+        post.return_value = llm_response("", status_code=429)
+
+        with self.assertRaises(AnalysisError):
+            analyze_dream("Je volais.")
+
+        self.assertEqual(post.call_count, 3)
+
     def test_groq_unavailable_raises_analysis_error(self, post, sleep) -> None:
         """Si Groq reste injoignable, une AnalysisError est levée."""
         post.side_effect = httpx.ConnectError("injoignable")
