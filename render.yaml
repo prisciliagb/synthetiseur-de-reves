@@ -27,7 +27,9 @@ services:
     # Démarrage : applique les migrations, puis lance Gunicorn (serveur de
     # production). Le délai de 180 s couvre la génération d'image, qui peut
     # prendre plus d'une minute si Replicate doit réessayer.
-    startCommand: python manage.py migrate --noinput && gunicorn config.wsgi:application --workers 2 --threads 4 --timeout 180
+    # --keep-alive 5 : sans lui, le test de charge montrait de rares connexions
+    # coupées (docs/test-de-charge.md).
+    startCommand: python manage.py migrate --noinput && gunicorn config.wsgi:application --workers 2 --threads 4 --timeout 180 --keep-alive 5
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.16"
