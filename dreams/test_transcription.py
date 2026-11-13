@@ -102,6 +102,16 @@ class TranscribeServiceTests(TestCase):
         self.assertEqual(post.call_count, 3)
         self.assertIn("momentanément indisponible", context.exception.user_message)
 
+    def test_quota_exceeded_gives_up_with_clear_message(self, post, sleep) -> None:
+        """Quota dépassé (429 à chaque essai) : abandon avec un message clair."""
+        post.return_value = groq_response(429, {"error": "rate limit"})
+
+        with self.assertRaises(TranscriptionError) as context:
+            transcribe(fake_audio())
+
+        self.assertEqual(post.call_count, 3)
+        self.assertIn("momentanément indisponible", context.exception.user_message)
+
     def test_does_not_retry_definitive_errors(self, post, sleep) -> None:
         """Une erreur définitive (clé invalide…) n'est pas retentée."""
         post.return_value = groq_response(401, {"error": "invalid api key"})

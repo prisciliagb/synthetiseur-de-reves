@@ -149,6 +149,56 @@ class GenerateDreamImageTests(TemporaryMediaMixin, TestCase):
         self.assertEqual(post.call_count, 2)
         self.assertFalse(dream.image)
 
+    def test_quota_exceeded_raises_error(self, post, get, sleep) -> None:
+        """Quota dépassé (429 à chaque essai) : erreur, sans image."""
+        post.return_value = replicate_response(429, {"detail": "throttled"})
+        dream = self.make_dream()
+
+        with self.assertRaises(ImageGenerationError):
+            generate_dream_image(dream)
+
+        self.assertEqual(post.call_count, 2)
+        self.assertFalse(dream.image)
+
+    def test_payment_required_is_not_retried(self, post, get, sleep) -> None:
+        """Crédit épuisé (402) : refus définitif, inutile de réessayer."""
+        post.return_value = replicate_response(402, {"detail": "payment required"})
+
+        with self.assertRaises(ImageGenerationError):
+            generate_dream_image(self.make_dream())
+
+        self.assertEqual(post.call_count, 1)
+        sleep.assert_not_called()
+
+    def test_unreadable_response_raises_error(self, post, get, sleep) -> None:
+        """Une réponse de Replicate sans statut ni image est une erreur."""
+        post.return_value = replicate_response(201, {"inattendu": True})
+
+        with self.assertRaises(ImageGenerationError):
+            generate_dream_image(self.make_dream())
+
+        get.assert_not_called()
+
+    def test_download_failure_raises_error(self, post, get, sleep) -> None:
+        """Si l'image produite ne peut pas être téléchargée, erreur sans image."""
+        post.return_value = replicate_response()
+        get.side_effect = httpx.ConnectError("injoignable")
+        dream = self.make_dream()
+
+        with self.assertRaises(ImageGenerationError):
+            generate_dream_image(dream)
+
+        self.assertFalse(dream.image)
+
+    @override_settings(DREAM_IMAGE_MAX_SIZE=10)
+    def test_too_large_download_raises_error(self, post, get, sleep) -> None:
+        """Une image téléchargée trop lourde est refusée."""
+        post.return_value = replicate_response()
+        get.return_value = image_download()
+
+        with self.assertRaises(ImageGenerationError):
+            generate_dream_image(self.make_dream())
+
     def test_refused_request_is_not_retried(self, post, get, sleep) -> None:
         """Une requête refusée (422 : prompt invalide…) n'est pas retentée."""
         post.return_value = replicate_response(422, {"detail": "invalid"})

@@ -162,3 +162,14 @@ class HealthTests(TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["status"], "error")
+
+
+class TestSafetyTests(SimpleTestCase):
+    """Pendant les tests, aucune vraie API ne peut être appelée."""
+
+    def test_api_keys_are_emptied_during_tests(self) -> None:
+        """Les clés du .env sont vidées, avec `manage.py test` comme avec pytest."""
+        self.assertTrue(settings.TESTING)
+        self.assertEqual(settings.GROQ_API_KEY, "")
+        self.assertEqual(settings.REPLICATE_API_TOKEN, "")
+        self.assertEqual(settings.CLOUDINARY_URL, "")

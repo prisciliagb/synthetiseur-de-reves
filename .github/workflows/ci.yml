@@ -61,7 +61,20 @@ jobs:
         run: python manage.py check
       - name: Vérifier qu'aucune migration ne manque
         run: python manage.py makemigrations --check --dry-run
-      - name: Lancer les tests avec la couverture
-        run: coverage run manage.py test
+      - name: Lancer les tests (pytest-django) avec la couverture
+        run: coverage run -m pytest
       - name: Afficher la couverture (échec sous 70 %)
         run: coverage report
+      # Rapport HTML détaillé (ligne par ligne), téléchargeable depuis la page
+      # du run GitHub Actions, rubrique « Artifacts ». Produit même si le seuil
+      # n'est pas atteint, pour voir ce qui manque.
+      - name: Générer le rapport de couverture HTML
+        if: always()
+        run: coverage html
+      - name: Publier le rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-couverture
+          path: htmlcov/
+          retention-days: 14

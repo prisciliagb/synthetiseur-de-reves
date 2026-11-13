@@ -20,8 +20,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(BASE_DIR / ".env")
 
-# Vrai pendant `manage.py test` : voir plus bas (clés d'API, sécurité, fichiers).
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+# Vrai pendant les tests, lancés avec `manage.py test` ou avec `pytest` :
+# voir plus bas (clés d'API vidées, sécurité, fichiers statiques).
+TESTING = (len(sys.argv) > 1 and sys.argv[1] == "test") or "pytest" in sys.modules
 
 # Obligatoire : sans SECRET_KEY, le site refuse de démarrer.
 SECRET_KEY = env("SECRET_KEY")
