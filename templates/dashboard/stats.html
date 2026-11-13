@@ -4,7 +4,7 @@
 {% block content %}
 <h1 class="h3 mb-4">Statistiques</h1>
 {% if stats.total or is_filtering or filter_form.errors %}
-  {% url 'dreams:stats' as reset_url %}
+  {% url 'dashboard:stats' as reset_url %}
   {% include "dreams/_filters.html" %}
 {% endif %}
 

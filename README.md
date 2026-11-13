@@ -88,17 +88,17 @@ config/              réglages, URL principales, page d'accueil et /health
 accounts/            utilisateur personnalisé, inscription avec consentement RGPD
 dreams/
 ├── models.py        Dream (le rêve) et ApiCall (suivi des appels aux API)
-├── views.py         historique, détail, enregistrement, étapes, statistiques
+├── views.py         historique, détail, enregistrement, étapes, suppression
 ├── forms.py         contrôle de l'audio, filtres de l'historique
 ├── services/        toute la logique métier, séparée des vues
 │   ├── api.py           appel commun : délai, nouvelles tentatives, suivi des coûts
 │   ├── transcription.py Groq Whisper
 │   ├── analysis.py      émotion et description de l'image (Groq LLM)
 │   ├── image.py         génération (Replicate) et téléchargement de l'image
-│   ├── pipeline.py      enchaînement des étapes et reprise après erreur
-│   └── stats.py         calculs des statistiques
+│   └── pipeline.py      enchaînement des étapes et reprise après erreur
 ├── storage.py       stockage Django vers Cloudinary
 └── signals.py       suppression de l'image quand le rêve est supprimé
+dashboard/           tableau de bord : statistiques (services.py : calculs)
 templates/, static/  pages, thème (static/css/theme.css) et JavaScript
 loadtests/           script du test de charge (Locust)
 docs/                rapport du test de charge

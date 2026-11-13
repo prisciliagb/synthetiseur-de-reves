@@ -11,7 +11,7 @@ from datetime import date, timedelta
 from django.db.models import Count, QuerySet
 from django.db.models.functions import TruncWeek
 
-from ..models import Dream
+from dreams.models import Dream
 
 
 @dataclass(frozen=True)
