@@ -12,7 +12,6 @@ from django.views.generic.detail import SingleObjectMixin
 from .forms import AudioRecordingForm, DreamFilterForm
 from .models import Dream
 from .services.pipeline import ANALYSIS, IMAGE, StepError, progress, run_step
-from .services.stats import compute_stats
 from .services.transcription import TranscriptionError, transcribe
 
 
@@ -59,44 +58,6 @@ class DreamListView(UserDreamsMixin, ListView):
         context = super().get_context_data(**kwargs)
         context["filter_form"] = self.filter_form
         context["is_filtering"] = self.filter_form.is_filtering()
-        return context
-
-
-class DreamStatsView(UserDreamsMixin, TemplateView):
-    """Statistiques des rêves de l'utilisateur, avec les filtres de l'historique.
-
-    Les graphiques sont dessinés par static/js/stats.js (Chart.js) à partir des
-    données transmises dans la page.
-    """
-
-    template_name = "dreams/stats.html"
-
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        """Calcule les statistiques des rêves filtrés.
-
-        Returns:
-            Le contexte du template : filtres, statistiques et données des
-            graphiques.
-        """
-        context = super().get_context_data(**kwargs)
-        filter_form = DreamFilterForm(self.request.GET or None)
-        stats = compute_stats(filter_form.filter(self.get_queryset()))
-        context["filter_form"] = filter_form
-        context["is_filtering"] = filter_form.is_filtering()
-        context["stats"] = stats
-        dominant_values = {emotion.value for emotion in stats.dominant}
-        # Données lues par le JavaScript (balise json_script, sans risque XSS).
-        context["chart_data"] = {
-            "weeks": {
-                "labels": [f"{monday:%d/%m}" for monday, _ in stats.weeks],
-                "counts": [count for _, count in stats.weeks],
-            },
-            "emotions": {
-                "labels": [e.label for e in stats.emotions],
-                "counts": [e.count for e in stats.emotions],
-                "dominant": [e.value in dominant_values for e in stats.emotions],
-            },
-        }
         return context
 
 

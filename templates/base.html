@@ -27,7 +27,7 @@
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="main-nav">
-        {% url 'home' as home_url %}{% url 'dreams:record' as record_url %}{% url 'dreams:list' as list_url %}{% url 'dreams:stats' as stats_url %}
+        {% url 'home' as home_url %}{% url 'dreams:record' as record_url %}{% url 'dreams:list' as list_url %}{% url 'dashboard:stats' as stats_url %}
         <ul class="navbar-nav mx-lg-auto gap-lg-1">
           <li class="nav-item">
             <a class="nav-link{% if request.path == home_url %} active{% endif %}" href="{{ home_url }}"{% if request.path == home_url %} aria-current="page"{% endif %}>{% include "_icon.html" with name="home" %}Accueil</a>

@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
 from .views import (
     AudioUploadView,
@@ -7,7 +8,6 @@ from .views import (
     DreamDetailView,
     DreamImageView,
     DreamListView,
-    DreamStatsView,
     RecordDreamView,
 )
 
@@ -15,7 +15,12 @@ app_name = "dreams"
 
 urlpatterns = [
     path("", DreamListView.as_view(), name="list"),
-    path("statistiques/", DreamStatsView.as_view(), name="stats"),
+    # Ancienne adresse des statistiques, déplacées dans l'app dashboard :
+    # redirigée pour que les anciens liens fonctionnent encore.
+    path(
+        "statistiques/",
+        RedirectView.as_view(pattern_name="dashboard:stats", query_string=True),
+    ),
     path("enregistrer/", RecordDreamView.as_view(), name="record"),
     path("enregistrer/audio/", AudioUploadView.as_view(), name="upload_audio"),
     path("<int:pk>/", DreamDetailView.as_view(), name="detail"),
