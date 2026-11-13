@@ -11,6 +11,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("comptes/", include("accounts.urls")),
     path("reves/", include("dreams.urls")),
+    path("tableau-de-bord/", include("dashboard.urls")),
     path("", HomeView.as_view(), name="home"),
     # État de l'application, pour la surveillance (issue #21).
     path("health", HealthView.as_view(), name="health"),

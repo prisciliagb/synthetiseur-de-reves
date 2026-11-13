@@ -1,7 +1,7 @@
 /**
  * Graphiques de la page « Statistiques » (Chart.js).
  *
- * Les données sont calculées par Django (dreams/services/stats.py) et placées
+ * Les données sont calculées par Django (dashboard/services.py) et placées
  * dans la page par la balise {{ chart_data|json_script:"stats-data" }}.
  */
 (function () {

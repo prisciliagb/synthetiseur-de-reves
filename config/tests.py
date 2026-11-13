@@ -71,7 +71,7 @@ class LayoutTests(TestCase):
         user = User.objects.create_user("alice", "alice@example.com")
         self.client.force_login(user)
 
-        stats_url = reverse("dreams:stats")
+        stats_url = reverse("dashboard:stats")
 
         response = self.client.get(stats_url)
 
