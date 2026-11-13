@@ -5,13 +5,15 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from .views import HomeView
+from .views import HealthView, HomeView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("comptes/", include("accounts.urls")),
     path("reves/", include("dreams.urls")),
     path("", HomeView.as_view(), name="home"),
+    # État de l'application, pour la surveillance (issue #21).
+    path("health", HealthView.as_view(), name="health"),
 ]
 
 # En développement, Django sert lui-même les images des rêves.

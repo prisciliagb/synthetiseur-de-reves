@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 import environ
@@ -181,6 +182,26 @@ REPLICATE_MAX_ATTEMPTS = env.int("REPLICATE_MAX_ATTEMPTS", default=2)
 DREAM_IMAGE_MAX_SIZE = 10 * 1024 * 1024
 
 
+# Tarifs des API, pour estimer le coût de chaque appel (en dollars).
+# Ce sont des estimations d'après les pages de prix publiques : à vérifier
+# sur https://groq.com/pricing et https://replicate.com/pricing.
+
+# Whisper : prix par heure d'audio, avec un minimum facturé de 10 secondes.
+GROQ_WHISPER_PRICE_PER_HOUR = Decimal(
+    env("GROQ_WHISPER_PRICE_PER_HOUR", default="0.04")
+)
+GROQ_WHISPER_MIN_BILLED_SECONDS = 10
+# LLM : prix par million de jetons (« tokens ») lus et écrits.
+GROQ_LLM_PRICE_INPUT_PER_MILLION = Decimal(
+    env("GROQ_LLM_PRICE_INPUT_PER_MILLION", default="0.075")
+)
+GROQ_LLM_PRICE_OUTPUT_PER_MILLION = Decimal(
+    env("GROQ_LLM_PRICE_OUTPUT_PER_MILLION", default="0.30")
+)
+# FLUX Schnell : prix par image.
+REPLICATE_PRICE_PER_IMAGE = Decimal(env("REPLICATE_PRICE_PER_IMAGE", default="0.003"))
+
+
 # Cloudinary (stockage persistant des images)
 # Sans CLOUDINARY_URL, les images sont enregistrées sur le disque (media/).
 
@@ -223,6 +244,8 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     # Toute adresse en http est redirigée vers https (sauf pendant les tests).
     SECURE_SSL_REDIRECT = not TESTING
+    # Sauf /health : un outil de surveillance peut l'appeler en http.
+    SECURE_REDIRECT_EXEMPT = [r"^health$"]
     # Les cookies de session et CSRF ne circulent qu'en https.
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

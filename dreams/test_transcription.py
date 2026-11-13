@@ -11,7 +11,7 @@ from unittest.mock import patch
 import httpx
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import SimpleTestCase, TestCase, override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import Dream
@@ -48,7 +48,7 @@ def groq_response(status_code: int, json: object = None) -> httpx.Response:
 @override_settings(GROQ_API_KEY="cle-de-test", GROQ_MAX_ATTEMPTS=3)
 @patch("dreams.services.api.time.sleep")
 @patch("dreams.services.transcription.httpx.post")
-class TranscribeServiceTests(SimpleTestCase):
+class TranscribeServiceTests(TestCase):
     """Tests du service `transcribe()`."""
 
     def test_returns_transcribed_text(self, post, sleep) -> None:
