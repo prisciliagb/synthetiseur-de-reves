@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Mes rêves · {{ block.super }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -6,20 +7,50 @@
   <a href="{% url 'dreams:record' %}" class="btn btn-primary">🎙️ Raconter un rêve</a>
 </div>
 {% if dreams %}
-  <div class="list-group">
+  <div class="list-group mb-4">
     {% for dream in dreams %}
-      <a href="{% url 'dreams:detail' dream.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-        <span>
-          <strong>{{ dream.created_at|date:"d/m/Y à H:i" }}</strong>
-          <span class="text-muted ms-2">{{ dream.transcription|truncatechars:80|default:"Pas encore transcrit" }}</span>
+      <a href="{% url 'dreams:detail' dream.pk %}" class="list-group-item list-group-item-action d-flex align-items-center gap-3">
+        {# Miniature de l'image, ou la petite lune de remplacement #}
+        {% if dream.image %}
+          <img src="{{ dream.thumbnail_url }}" alt="" class="rounded flex-shrink-0 object-fit-cover" width="60" height="60" loading="lazy">
+        {% else %}
+          <img src="{% static 'img/dream-placeholder.svg' %}" alt="" class="rounded flex-shrink-0 object-fit-cover" width="60" height="60">
+        {% endif %}
+        <span class="flex-grow-1 text-truncate">
+          <strong class="d-block">{{ dream.created_at|date:"d/m/Y à H:i" }}</strong>
+          <span class="text-muted">{{ dream.transcription|truncatechars:80|default:"Pas encore transcrit" }}</span>
         </span>
-        <span>
-          {% if dream.emotion %}<span class="badge text-bg-info">{{ dream.get_emotion_display }}</span>{% endif %}
-          <span class="badge text-bg-secondary">{{ dream.get_status_display }}</span>
+        <span class="text-end flex-shrink-0">
+          {% if dream.emotion %}
+            <span class="badge text-bg-info"><span aria-hidden="true">{{ dream.emotion_icon }}</span> {{ dream.get_emotion_display }}</span>
+          {% endif %}
+          {% if dream.status != "done" %}
+            <span class="badge text-bg-secondary">{{ dream.get_status_display }}</span>
+          {% endif %}
         </span>
       </a>
     {% endfor %}
   </div>
+
+  {% if is_paginated %}
+    <nav aria-label="Pages de l'historique">
+      <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">← Plus récents</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">← Plus récents</span></li>
+        {% endif %}
+        <li class="page-item active" aria-current="page">
+          <span class="page-link">Page {{ page_obj.number }} sur {{ paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Plus anciens →</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Plus anciens →</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
 {% else %}
   <p class="text-muted">Bonjour {{ user.username }}, vous n'avez encore enregistré aucun rêve.</p>
 {% endif %}

@@ -27,10 +27,15 @@ class UserDreamsMixin:
 
 
 class DreamListView(UserDreamsMixin, ListView):
-    """Liste des rêves de l'utilisateur connecté."""
+    """Historique des rêves de l'utilisateur connecté, du plus récent au plus ancien.
+
+    L'ordre vient de `Dream.Meta.ordering`. La liste est découpée en pages de
+    10 rêves ; une page qui n'existe pas renvoie une erreur 404.
+    """
 
     model = Dream
     context_object_name = "dreams"
+    paginate_by = 10
 
 
 class DreamDetailView(UserDreamsMixin, DetailView):

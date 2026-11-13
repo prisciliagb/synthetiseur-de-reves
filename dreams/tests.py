@@ -1,4 +1,5 @@
 import tempfile
+from datetime import timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -8,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import Dream
 
@@ -109,6 +111,121 @@ class DreamAccessTests(TestCase):
         response = self.client.get(reverse("dreams:detail", args=[self.bob_dream.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+
+class DreamHistoryTests(TestCase):
+    """Tests de l'historique : ordre, pagination, miniature et icône d'émotion."""
+
+    def setUp(self) -> None:
+        """Connecte un utilisateur."""
+        self.user = User.objects.create_user("alice", "alice@example.com")
+        self.client.force_login(self.user)
+        self.url = reverse("dreams:list")
+
+    def create_dreams(self, count: int) -> list[Dream]:
+        """Crée des rêves datés d'un jour d'écart, du plus ancien au plus récent.
+
+        Args:
+            count: Le nombre de rêves à créer.
+
+        Returns:
+            Les rêves créés, du plus ancien au plus récent.
+        """
+        start = timezone.now() - timedelta(days=count)
+        dreams = []
+        for day in range(count):
+            dream = Dream.objects.create(user=self.user, transcription=f"Rêve {day}")
+            # created_at est rempli automatiquement : on le change après coup.
+            Dream.objects.filter(pk=dream.pk).update(
+                created_at=start + timedelta(days=day)
+            )
+            dreams.append(dream)
+        return dreams
+
+    def test_dreams_are_listed_from_newest_to_oldest(self) -> None:
+        """Le rêve le plus récent est affiché en premier."""
+        oldest, middle, newest = self.create_dreams(3)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(list(response.context["dreams"]), [newest, middle, oldest])
+
+    def test_list_shows_ten_dreams_per_page(self) -> None:
+        """L'historique affiche 10 rêves par page, la suite en page 2."""
+        dreams = self.create_dreams(11)
+
+        first_page = self.client.get(self.url)
+        second_page = self.client.get(self.url, {"page": 2})
+
+        self.assertEqual(len(first_page.context["dreams"]), 10)
+        self.assertContains(first_page, "Page 1 sur 2")
+        self.assertEqual(list(second_page.context["dreams"]), [dreams[0]])
+
+    def test_no_pagination_with_few_dreams(self) -> None:
+        """Avec 10 rêves ou moins, il n'y a pas de navigation entre pages."""
+        self.create_dreams(10)
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, "Page 1 sur")
+
+    def test_unknown_page_returns_404(self) -> None:
+        """Une page qui n'existe pas renvoie une erreur 404."""
+        self.create_dreams(3)
+
+        response = self.client.get(self.url, {"page": 5})
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_dream_without_image_shows_placeholder(self) -> None:
+        """Un rêve sans image affiche la petite lune de remplacement."""
+        self.create_dreams(1)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "img/dream-placeholder.svg")
+
+    def test_dream_with_image_shows_thumbnail(self) -> None:
+        """Un rêve avec une image affiche sa miniature."""
+        Dream.objects.create(user=self.user, image="dreams/2026/11/abc.webp")
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "dreams/2026/11/abc.webp")
+        self.assertNotContains(response, "img/dream-placeholder.svg")
+
+    @override_settings(
+        CLOUDINARY_URL="cloudinary://123456:secret@demo-cloud",
+        STORAGES={
+            "default": {"BACKEND": "dreams.storage.CloudinaryStorage"},
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            },
+        },
+    )
+    def test_thumbnail_is_resized_by_cloudinary(self) -> None:
+        """Avec Cloudinary, l'historique charge une miniature, pas l'image entière."""
+        Dream.objects.create(user=self.user, image="dreams/2026/11/abc.webp")
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "/c_fill,h_120,w_120/")
+        self.assertContains(response, "dreams/2026/11/abc.webp")
+
+    def test_emotion_is_shown_with_its_icon(self) -> None:
+        """L'émotion d'un rêve est affichée avec son emoji."""
+        Dream.objects.create(user=self.user, emotion=Dream.Emotion.SCARY)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "😱")
+        self.assertContains(response, "Effrayant")
+
+    def test_every_emotion_has_an_icon(self) -> None:
+        """Chaque émotion possible a son emoji (aucun oubli si on en ajoute une)."""
+        for emotion in Dream.Emotion:
+            with self.subTest(emotion=emotion):
+                self.assertNotEqual(Dream(emotion=emotion).emotion_icon, "")
 
 
 def fake_audio(header: bytes, name: str = "reve.webm") -> SimpleUploadedFile:
