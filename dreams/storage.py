@@ -96,6 +96,31 @@ class CloudinaryStorage(Storage):
         )
         return url
 
+    def thumbnail_url(self, name: str, size: int) -> str:
+        """Renvoie l'adresse d'une version carrée et réduite de l'image.
+
+        Cloudinary fabrique lui-même cette version à partir des paramètres
+        placés dans l'adresse (largeur, hauteur, recadrage) : on ne stocke
+        qu'une seule image.
+
+        Args:
+            name: Le nom du fichier enregistré.
+            size: Le côté de la miniature, en pixels.
+
+        Returns:
+            L'adresse de la miniature.
+        """
+        public_id, extension = _split_name(name)
+        url, _ = cloudinary.utils.cloudinary_url(
+            public_id,
+            format=extension,
+            secure=True,
+            width=size,
+            height=size,
+            crop="fill",
+        )
+        return url
+
     def exists(self, name: str) -> bool:
         """Indique si un fichier porte déjà ce nom.
 

@@ -237,6 +237,14 @@ class CloudinaryStorageTests(SimpleTestCase):
         self.assertTrue(url.startswith("https://res.cloudinary.com/demo-cloud/"))
         self.assertTrue(url.endswith("dreams/2026/11/abc.webp"))
 
+    def test_thumbnail_url_asks_cloudinary_for_a_small_square(self) -> None:
+        """La miniature demande à Cloudinary une image carrée réduite."""
+        url = CloudinaryStorage().thumbnail_url("dreams/2026/11/abc.webp", 120)
+
+        self.assertTrue(url.startswith("https://res.cloudinary.com/demo-cloud/"))
+        self.assertIn("c_fill,h_120,w_120", url)
+        self.assertTrue(url.endswith("dreams/2026/11/abc.webp"))
+
     @patch("dreams.storage.cloudinary.uploader.destroy")
     def test_delete_removes_image_from_cloudinary(self, destroy) -> None:
         """Supprimer l'image la supprime de Cloudinary."""
