@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ dream }} · {{ block.super }}{% endblock %}
+{% block content %}
+<a href="{% url 'dreams:list' %}" class="btn btn-link px-0 mb-3">← Mes rêves</a>
+<h1 class="h3 mb-3">Rêve du {{ dream.created_at|date:"d/m/Y à H:i" }}</h1>
+<p>
+  <span class="badge text-bg-secondary">{{ dream.get_status_display }}</span>
+  {% if dream.emotion %}
+    {% include "dreams/_emotion.html" with value=dream.emotion label=dream.get_emotion_display %}
+    {% if dream.confidence is not None %}<small class="text-muted">confiance : {% widthratio dream.confidence 1 100 %} %</small>{% endif %}
+  {% endif %}
+</p>
+{% if dream.image %}
+  <img src="{{ dream.image.url }}" alt="Illustration du rêve" class="img-fluid rounded mb-4" width="512" height="512">
+{% else %}
+  {# Image de remplacement : la génération a échoué ou n'a pas encore eu lieu #}
+  <figure class="mb-4">
+    <img src="{% static 'img/dream-placeholder.svg' %}" alt="" class="img-fluid rounded" width="512" height="512">
+    <figcaption class="text-muted small mt-1">Image indisponible pour ce rêve.</figcaption>
+  </figure>
+{% endif %}
+{# Traitement incomplet (étape échouée ou page quittée) : on peut le relancer #}
+{% if progress.next_step %}
+  <div id="pipeline-resume" class="mb-4"
+       data-next-step="{{ progress.next_step }}"
+       data-next-url="{{ progress.next_url }}"
+       data-redirect-url="{{ progress.redirect_url }}">
+    {% csrf_token %}
+    <div class="alert alert-warning">
+      {% if dream.status == "failed" %}
+        Une étape du traitement n'a pas abouti. Les résultats déjà obtenus sont conservés.
+      {% else %}
+        Le traitement de ce rêve n'est pas terminé.
+      {% endif %}
+    </div>
+    {% include "dreams/_progress.html" %}
+    <div id="pipeline-error" class="alert alert-danger d-none" role="alert"></div>
+    <button id="btn-resume" type="button" class="btn btn-primary">Relancer les étapes manquantes</button>
+  </div>
+  <script src="{% static 'js/pipeline.js' %}" defer></script>
+{% endif %}
+<h2 class="h5">Transcription</h2>
+<p>{{ dream.transcription|default:"Pas encore transcrit."|linebreaksbr }}</p>
+<hr class="my-4">
+<a href="{% url 'dreams:delete' dream.pk %}" class="btn btn-outline-danger">Supprimer ce rêve</a>
+{% endblock %}

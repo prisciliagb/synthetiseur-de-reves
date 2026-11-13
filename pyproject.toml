@@ -1,0 +1,32 @@
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "D"]
+ignore = ["D100", "D104", "D106"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pytest.ini_options]
+# pytest-django : lance les tests Django (y compris nos classes TestCase).
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["tests.py", "test_*.py"]
+addopts = "--strict-markers"
+# Le dossier staticfiles/ n'existe qu'après collectstatic (en production) :
+# WhiteNoise le signale à chaque test, sans conséquence. Seul cet avertissement
+# est masqué, les autres restent visibles.
+filterwarnings = ["ignore:No directory at:UserWarning"]
+
+[tool.coverage.run]
+# Mesure uniquement le code de l'application (ni les tests ni les migrations).
+source = ["accounts", "config", "dashboard", "dreams"]
+omit = ["*/migrations/*", "*/tests.py", "*/test_*.py", "config/asgi.py", "config/wsgi.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# La CI échoue si la couverture descend sous ce seuil (issue #17 : 70 %).
+fail_under = 70

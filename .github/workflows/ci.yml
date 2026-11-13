@@ -1,0 +1,80 @@
+# Intégration continue : vérifie automatiquement chaque PR et chaque push.
+# Si une étape échoue, la PR est marquée en rouge et ne peut pas être fusionnée.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    name: Linting (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Installer les dépendances
+        run: pip install -r requirements-dev.txt
+      - name: Vérifier les règles de code
+        run: ruff check .
+      - name: Vérifier la mise en forme
+        run: ruff format --check .
+
+  tests:
+    name: Tests et couverture
+    runs-on: ubuntu-latest
+    # Même base de données qu'en production : PostgreSQL 17.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: dreams
+          POSTGRES_USER: dreams
+          POSTGRES_PASSWORD: dreams
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dreams"
+          --health-interval 5s
+          --health-retries 5
+    env:
+      # Valeurs de test uniquement : aucune vraie clé n'est utilisée dans la CI.
+      SECRET_KEY: cle-secrete-pour-la-ci
+      DEBUG: "False"
+      DATABASE_URL: postgres://dreams:dreams@localhost:5432/dreams
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Installer les dépendances
+        run: pip install -r requirements-dev.txt
+      - name: Vérifier la configuration Django
+        run: python manage.py check
+      - name: Vérifier qu'aucune migration ne manque
+        run: python manage.py makemigrations --check --dry-run
+      - name: Lancer les tests (pytest-django) avec la couverture
+        run: coverage run -m pytest
+      - name: Afficher la couverture (échec sous 70 %)
+        run: coverage report
+      # Rapport HTML détaillé (ligne par ligne), téléchargeable depuis la page
+      # du run GitHub Actions, rubrique « Artifacts ». Produit même si le seuil
+      # n'est pas atteint, pour voir ce qui manque.
+      - name: Générer le rapport de couverture HTML
+        if: always()
+        run: coverage html
+      - name: Publier le rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-couverture
+          path: htmlcov/
+          retention-days: 14

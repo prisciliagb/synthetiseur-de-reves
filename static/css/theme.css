@@ -1,0 +1,349 @@
+/*
+ * Identité visuelle du Synthétiseur de rêves : lavande claire et violet.
+ *
+ * Chargé après Bootstrap dans base.html : on change les couleurs de Bootstrap
+ * (variables --bs-*) pour que tous ses composants (boutons, liens, pagination,
+ * formulaires) prennent le violet du thème, sur toutes les pages.
+ */
+
+/* --- Couleurs ------------------------------------------------------------ */
+:root {
+  /* Violet principal et ses nuances */
+  --dv-violet: #5b34c7;
+  --dv-violet-dark: #4a28a8;
+  --dv-violet-darker: #3b1f88;
+  --dv-violet-mid: #8f71dc;
+  --dv-violet-soft: #efeafd;
+  --dv-violet-border: #e4dcf8;
+
+  /* Fond lavande et texte (encre violet très foncé) */
+  --dv-bg: #f6f3fe;
+  --dv-hill: #ebe4fc;
+  --dv-ink: #1d1446;
+  --dv-ink-soft: #5d5680;
+  --dv-shadow: 0 10px 30px rgba(74, 40, 168, 0.08);
+
+  /* Bootstrap : couleur principale, liens, texte, police */
+  --bs-primary: #5b34c7;
+  --bs-primary-rgb: 91, 52, 199;
+  --bs-link-color: #5b34c7;
+  --bs-link-color-rgb: 91, 52, 199;
+  --bs-link-hover-color: #3b1f88;
+  --bs-link-hover-color-rgb: 59, 31, 136;
+  --bs-body-color: #1d1446;
+  --bs-body-color-rgb: 29, 20, 70;
+  --bs-secondary-color: #5d5680;
+  --bs-focus-ring-color: rgba(91, 52, 199, 0.25);
+  --bs-border-radius: 0.75rem;
+  --bs-border-radius-lg: 1rem;
+  /* Polices déjà installées sur l'appareil : aucun appel à un service externe. */
+  --bs-body-font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+}
+
+/* Une couleur par émotion : la pastille dans l'historique, le détail et les statistiques. */
+.emotion-happy { --emotion-color: #e0a100; }
+.emotion-sad { --emotion-color: #2a78d6; }
+.emotion-stressful { --emotion-color: #eb6834; }
+.emotion-scary { --emotion-color: #d63c3b; }
+.emotion-strange { --emotion-color: #1baf7a; }
+.emotion-neutral { --emotion-color: #8b8a86; }
+
+/* --- Fond : lavande avec deux collines douces en bas de l'écran ------------- */
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(1000px 300px at 0% 100%, var(--dv-hill) 0 60%, transparent 61%),
+    radial-gradient(900px 240px at 100% 100%, var(--dv-hill) 0 60%, transparent 61%),
+    var(--dv-bg);
+  background-attachment: fixed;
+}
+
+main {
+  flex: 1;
+}
+
+h1,
+.h1,
+h2,
+.h2,
+h3,
+.h3 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.dv-icon {
+  flex-shrink: 0;
+}
+
+/* --- Barre de navigation : une boîte blanche arrondie ------------------------ */
+.dv-navbar {
+  background: #fff;
+  border-radius: 1.25rem;
+  box-shadow: var(--dv-shadow);
+  padding: 0.6rem 1rem;
+}
+
+.dv-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+  color: var(--dv-ink);
+}
+
+.dv-brand-accent {
+  color: var(--dv-violet);
+}
+
+.dv-navbar .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem !important;
+  border-radius: 999px;
+  color: var(--dv-ink);
+  font-weight: 500;
+}
+
+.dv-navbar .nav-link:hover {
+  color: var(--dv-violet);
+}
+
+.dv-navbar .nav-link.active {
+  background: var(--dv-violet-soft);
+  color: var(--dv-ink);
+}
+
+/* Bouton avec icône : l'icône et le texte alignés. */
+.dv-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* --- Boutons ------------------------------------------------------------------- */
+.btn {
+  font-weight: 500;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--dv-violet);
+  --bs-btn-border-color: var(--dv-violet);
+  --bs-btn-hover-bg: var(--dv-violet-dark);
+  --bs-btn-hover-border-color: var(--dv-violet-dark);
+  --bs-btn-active-bg: var(--dv-violet-darker);
+  --bs-btn-active-border-color: var(--dv-violet-darker);
+  --bs-btn-disabled-bg: var(--dv-violet);
+  --bs-btn-disabled-border-color: var(--dv-violet);
+  --bs-btn-focus-shadow-rgb: 91, 52, 199;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--dv-violet-dark);
+  --bs-btn-border-color: #c9bbf2;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--dv-violet);
+  --bs-btn-hover-border-color: var(--dv-violet);
+  --bs-btn-active-bg: var(--dv-violet-dark);
+  --bs-btn-active-border-color: var(--dv-violet-dark);
+  --bs-btn-focus-shadow-rgb: 91, 52, 199;
+}
+
+/* --- Cartes, listes, pagination : blanches, arrondies, ombre douce ------------ */
+.card,
+.list-group {
+  --bs-card-border-color: var(--dv-violet-border);
+  --bs-list-group-border-color: var(--dv-violet-border);
+}
+
+.card {
+  border-radius: 1.25rem;
+  box-shadow: var(--dv-shadow);
+}
+
+.list-group {
+  border-radius: 1.25rem;
+  box-shadow: var(--dv-shadow);
+}
+
+.list-group-item-action:hover {
+  background-color: var(--dv-violet-soft);
+}
+
+.pagination {
+  --bs-pagination-color: var(--dv-violet-dark);
+  --bs-pagination-hover-color: var(--dv-violet-darker);
+  --bs-pagination-active-bg: var(--dv-violet);
+  --bs-pagination-active-border-color: var(--dv-violet);
+  --bs-pagination-focus-box-shadow: 0 0 0 0.25rem rgba(91, 52, 199, 0.25);
+}
+
+/* --- Formulaires ----------------------------------------------------------------- */
+.form-control:focus,
+.form-select:focus {
+  border-color: #b3a2ec;
+  box-shadow: 0 0 0 0.25rem rgba(91, 52, 199, 0.2);
+}
+
+.form-check-input:checked {
+  background-color: var(--dv-violet);
+  border-color: var(--dv-violet);
+}
+
+/* --- Émotion : pastille de couleur + nom ------------------------------------------- */
+.emotion-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.25em 0.65em;
+  border-radius: 999px;
+  background: var(--dv-violet-soft);
+  color: var(--dv-ink);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.emotion-dot {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: var(--emotion-color, #8b8a86);
+  flex-shrink: 0;
+}
+
+/* --- Consentement avant l'envoi d'un enregistrement ------------------------------- */
+.dv-consent {
+  padding: 0.75rem 0.9rem 0.75rem 2.4rem;
+  border-radius: 0.75rem;
+  background: var(--dv-violet-soft);
+}
+
+/* --- Étapes du traitement (icônes SVG de pipeline.js) ------------------------------- */
+.step-icon {
+  display: inline-flex;
+  width: 1.1rem;
+  justify-content: center;
+}
+
+/* --- Page d'accueil : bandeau --------------------------------------------------------- */
+.dv-hero-title {
+  font-size: clamp(2.2rem, 4.2vw, 3.4rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--dv-ink);
+}
+
+.dv-sparkles {
+  color: var(--dv-violet-mid);
+  vertical-align: top;
+  width: 0.6em;
+  height: auto;
+}
+
+.dv-hero-tagline {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--dv-ink);
+}
+
+/* « émotions » : en violet, souligné d'un trait de pinceau. */
+.dv-underline {
+  position: relative;
+  display: inline-block;
+  color: var(--dv-violet);
+  font-style: italic;
+  font-weight: 700;
+}
+
+.dv-underline::after {
+  content: "";
+  position: absolute;
+  left: 0.1em;
+  right: -0.1em;
+  bottom: -0.3em;
+  height: 0.35em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14' preserveAspectRatio='none'%3E%3Cpath d='M3 10 C 60 2, 140 2, 197 8' fill='none' stroke='%235b34c7' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
+}
+
+.dv-hero-text {
+  font-size: 1.15rem;
+  color: var(--dv-ink-soft);
+  max-width: 30rem;
+}
+
+.dv-cta {
+  padding: 0.8rem 1.8rem;
+  box-shadow: 0 10px 24px rgba(91, 52, 199, 0.25);
+}
+
+.dv-hero-art {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* --- Page d'accueil : les 4 étapes ------------------------------------------------- */
+.dv-step {
+  height: 100%;
+  padding: 1.75rem 1.25rem;
+  text-align: center;
+  background: #fff;
+  border-radius: 1.5rem;
+  box-shadow: var(--dv-shadow);
+}
+
+.dv-step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+  background: var(--dv-violet-soft);
+  color: var(--dv-violet);
+}
+
+.dv-step-title {
+  font-size: 1.15rem;
+  line-height: 1.3;
+  color: var(--dv-ink);
+}
+
+.dv-step-title strong {
+  display: block;
+  font-weight: 700;
+}
+
+.dv-step-text {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--dv-ink-soft);
+}
+
+/* --- Téléphone ---------------------------------------------------------------------- */
+@media (max-width: 575.98px) {
+  main.container {
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+  }
+
+  .dv-step {
+    padding: 1.25rem 0.75rem;
+  }
+
+  .dv-step-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+
+  .dv-step-title {
+    font-size: 1rem;
+  }
+}

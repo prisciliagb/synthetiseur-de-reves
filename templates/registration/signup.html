@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Créer un compte · {{ block.super }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <div class="card shadow-sm"><div class="card-body p-4">
+      <h1 class="h3 mb-4">Créer un compte</h1>
+      <form method="post" novalidate>
+        {% include "registration/_form.html" %}
+        <button type="submit" class="btn btn-primary w-100">Créer mon compte</button>
+      </form>
+      <p class="mt-3 mb-0 text-center">Déjà inscrit ? <a href="{% url 'accounts:login' %}">Se connecter</a></p>
+    </div></div>
+  </div>
+</div>
+{% endblock %}
