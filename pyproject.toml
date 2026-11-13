@@ -9,3 +9,14 @@ ignore = ["D100", "D104", "D106"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.coverage.run]
+# Mesure uniquement le code de l'application (ni les tests ni les migrations).
+source = ["accounts", "config", "dashboard", "dreams"]
+omit = ["*/migrations/*", "*/tests.py", "*/test_*.py", "config/asgi.py", "config/wsgi.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# La CI échoue si la couverture descend sous ce seuil (issue #17 : 70 %).
+fail_under = 70
