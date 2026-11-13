@@ -1,10 +1,12 @@
 from typing import Any
 
 from django.conf import settings
+from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import QuerySet
 from django.http import HttpRequest, JsonResponse
+from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import DetailView, ListView, TemplateView
+from django.views.generic import DeleteView, DetailView, ListView, TemplateView
 from django.views.generic.detail import SingleObjectMixin
 
 from .forms import AudioRecordingForm
@@ -53,6 +55,23 @@ class DreamDetailView(UserDreamsMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context["progress"] = progress(self.object)
         return context
+
+
+class DreamDeleteView(UserDreamsMixin, SuccessMessageMixin, DeleteView):
+    """Suppression d'un rêve, après confirmation.
+
+    - GET affiche la page de confirmation ;
+    - POST supprime le rêve, puis renvoie vers l'historique.
+
+    Un simple lien ne peut donc pas supprimer un rêve par accident. L'image
+    est supprimée du stockage par le signal `delete_dream_image` (RGPD).
+    Grâce à UserDreamsMixin, le rêve d'un autre utilisateur renvoie une 404.
+    """
+
+    model = Dream
+    context_object_name = "dream"
+    success_url = reverse_lazy("dreams:list")
+    success_message = "Votre rêve a bien été supprimé."
 
 
 class RecordDreamView(TemplateView):

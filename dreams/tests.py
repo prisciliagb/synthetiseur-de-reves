@@ -228,6 +228,67 @@ class DreamHistoryTests(TestCase):
                 self.assertNotEqual(Dream(emotion=emotion).emotion_icon, "")
 
 
+class DreamDeleteTests(TestCase):
+    """Tests de la suppression d'un rêve."""
+
+    def setUp(self) -> None:
+        """Crée deux utilisateurs ayant chacun un rêve, et connecte Alice."""
+        self.alice = User.objects.create_user("alice", "alice@example.com")
+        self.bob = User.objects.create_user("bob", "bob@example.com")
+        self.alice_dream = Dream.objects.create(
+            user=self.alice, transcription="Je volais au-dessus de la mer"
+        )
+        self.bob_dream = Dream.objects.create(
+            user=self.bob, transcription="J'étais perdu dans une forêt"
+        )
+        self.client.force_login(self.alice)
+
+    def delete_url(self, dream: Dream) -> str:
+        """Renvoie l'adresse de suppression d'un rêve."""
+        return reverse("dreams:delete", args=[dream.pk])
+
+    def test_detail_page_has_delete_button(self) -> None:
+        """La page d'un rêve propose de le supprimer."""
+        response = self.client.get(reverse("dreams:detail", args=[self.alice_dream.pk]))
+
+        self.assertContains(response, self.delete_url(self.alice_dream))
+
+    def test_get_asks_for_confirmation_without_deleting(self) -> None:
+        """Ouvrir la page de suppression demande confirmation, sans rien supprimer."""
+        response = self.client.get(self.delete_url(self.alice_dream))
+
+        self.assertContains(response, "Supprimer ce rêve ?")
+        self.assertContains(response, "Je volais")
+        self.assertTrue(Dream.objects.filter(pk=self.alice_dream.pk).exists())
+
+    def test_post_deletes_dream_and_redirects_to_history(self) -> None:
+        """Confirmer supprime le rêve et renvoie vers l'historique avec un message."""
+        response = self.client.post(self.delete_url(self.alice_dream), follow=True)
+
+        self.assertRedirects(response, reverse("dreams:list"))
+        self.assertContains(response, "Votre rêve a bien été supprimé.")
+        self.assertFalse(Dream.objects.filter(pk=self.alice_dream.pk).exists())
+
+    def test_user_cannot_delete_other_users_dream(self) -> None:
+        """Le rêve d'un autre utilisateur renvoie une 404 et n'est pas supprimé."""
+        page = self.client.get(self.delete_url(self.bob_dream))
+        deletion = self.client.post(self.delete_url(self.bob_dream))
+
+        self.assertEqual(page.status_code, 404)
+        self.assertEqual(deletion.status_code, 404)
+        self.assertTrue(Dream.objects.filter(pk=self.bob_dream.pk).exists())
+
+    def test_anonymous_user_cannot_delete(self) -> None:
+        """Un visiteur non connecté est renvoyé vers la connexion."""
+        self.client.logout()
+
+        response = self.client.post(self.delete_url(self.alice_dream))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("accounts:login"), response.url)
+        self.assertTrue(Dream.objects.filter(pk=self.alice_dream.pk).exists())
+
+
 def fake_audio(header: bytes, name: str = "reve.webm") -> SimpleUploadedFile:
     """Crée un faux fichier audio qui commence par la signature donnée.
 
