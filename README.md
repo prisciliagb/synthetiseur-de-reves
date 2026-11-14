@@ -6,7 +6,7 @@ Racontez votre rêve à voix haute au réveil. L'application le transcrit, déte
 l'émotion qu'il dégage et le transforme en image. Vous retrouvez ensuite tous vos
 rêves dans un historique, avec des statistiques sur vos émotions.
 
-**Application en ligne :** _lien à ajouter après le déploiement sur Render_
+**Application en ligne :** https://synthetiseur-de-reves-8u62.onrender.com
 
 ## Sommaire
 
