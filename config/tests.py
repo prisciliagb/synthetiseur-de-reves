@@ -80,6 +80,19 @@ class LayoutTests(TestCase):
         )
 
 
+def fake_production_secret_key() -> str:
+    """Génère une clé secrète aléatoire pour simuler la production.
+
+    Le préfixe évite qu'elle commence par « $ » : django-environ prendrait
+    alors le début de la clé pour le nom d'une autre variable, et refuserait
+    de démarrer. Cela arrivait avec environ 2 % des clés tirées au hasard.
+
+    Returns:
+        Une clé de plus de 50 caractères, comme l'exige `check --deploy`.
+    """
+    return f"cle-de-test-{get_random_secret_key()}"
+
+
 class ProductionSettingsTests(SimpleTestCase):
     """Les réglages de production passent la vérification de sécurité de Django."""
 
@@ -112,7 +125,7 @@ class ProductionSettingsTests(SimpleTestCase):
             "--deploy",
             "--fail-level",
             "WARNING",
-            SECRET_KEY=get_random_secret_key(),
+            SECRET_KEY=fake_production_secret_key(),
             DEBUG="False",
             RENDER_EXTERNAL_HOSTNAME="synthetiseur.onrender.com",
         )
@@ -126,7 +139,7 @@ class ProductionSettingsTests(SimpleTestCase):
             "-c",
             "from django.conf import settings; "
             "print(settings.ALLOWED_HOSTS, settings.CSRF_TRUSTED_ORIGINS)",
-            SECRET_KEY=get_random_secret_key(),
+            SECRET_KEY=fake_production_secret_key(),
             DEBUG="False",
             RENDER_EXTERNAL_HOSTNAME="synthetiseur.onrender.com",
         )
